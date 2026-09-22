@@ -1,14 +1,6 @@
 import twilio from "twilio";
 import { toE164India } from "@/lib/utils";
 
-<<<<<<< HEAD
-=======
-/** Local testing only. Never set SKIP_OTP in production. */
-export function isOtpBypass(): boolean {
-  return process.env.NODE_ENV !== "production" && process.env.SKIP_OTP === "1";
-}
-
->>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
 export function isTwilioConfigured(): boolean {
   return Boolean(
     process.env.TWILIO_ACCOUNT_SID &&
@@ -53,11 +45,7 @@ export function twilioUserMessage(error: unknown, fallback: string): string {
     return "Too many OTP requests. Please wait a few minutes.";
   }
   if (code === 21608 || /unverified/i.test(message) || /trial/i.test(message)) {
-<<<<<<< HEAD
     return "Twilio trial can only SMS numbers verified in the Twilio Console.";
-=======
-    return "only verified numbers can be used for verification";
->>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
   }
 
   return fallback;
