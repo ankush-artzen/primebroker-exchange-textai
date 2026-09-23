@@ -45,7 +45,7 @@ export function twilioUserMessage(error: unknown, fallback: string): string {
     return "Too many OTP requests. Please wait a few minutes.";
   }
   if (code === 21608 || /unverified/i.test(message) || /trial/i.test(message)) {
-    return "Twilio trial can only SMS numbers verified in the Twilio Console.";
+    return "only verified numbers can be used for verification";
   }
 
   return fallback;
