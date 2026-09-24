@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { LeadFormData, ParsedLead, SpeechLanguage } from "@/lib/types";
@@ -67,6 +67,7 @@ export function VoiceLeadCapture({
   const [showVoiceHint, setShowVoiceHint] = useState(false);
   const [parseStatus, setParseStatus] = useState("Tap and describe the lead");
   const [editingSpeech, setEditingSpeech] = useState(false);
+  const speechRef = useRef<HTMLTextAreaElement>(null);
 
   const { transcript, listening, supported, start, stop, setTranscript } =
     useSpeechRecognition(language);
@@ -90,6 +91,16 @@ export function VoiceLeadCapture({
       setParseStatus("Tap and describe the lead");
     }
   }, [active, stop, setTranscript]);
+
+  const resizeSpeech = (el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  };
+
+  useEffect(() => {
+    if (editingSpeech) resizeSpeech(speechRef.current);
+  }, [editingSpeech, transcript]);
 
   const dismissVoiceHint = () => {
     localStorage.setItem(VOICE_HINT_KEY, "1");
@@ -334,12 +345,16 @@ export function VoiceLeadCapture({
                 </div>
                 {editingSpeech ? (
                   <textarea
+                    ref={speechRef}
                     value={transcript}
-                    onChange={(e) => setTranscript(e.target.value)}
-                    rows={3}
+                    onChange={(e) => {
+                      setTranscript(e.target.value);
+                      resizeSpeech(e.currentTarget);
+                    }}
+                    rows={1}
                     autoFocus
                     placeholder="Edit the words from your voice note"
-                    className="w-full rounded-[10px] border border-border bg-surface px-3 py-2.5 text-sm text-primary outline-none focus:border-primary"
+                    className="min-h-[44px] w-full resize-none overflow-hidden rounded-[10px] border border-border bg-surface px-3 py-2.5 text-left text-sm leading-relaxed text-primary outline-none focus:border-primary"
                   />
                 ) : (
                   <p className="min-h-[44px] rounded-[10px] border border-border bg-surface px-3 py-2.5 text-left text-sm leading-relaxed text-primary">
