@@ -3,6 +3,7 @@ import { createOtpToken } from "@/lib/otp-token";
 import { prisma } from "@/lib/prisma";
 import {
   checkVerificationSms,
+  isOtpBypass,
   isTwilioConfigured,
   twilioUserMessage,
 } from "@/lib/twilio";

@@ -1,6 +1,11 @@
 import twilio from "twilio";
 import { toE164India } from "@/lib/utils";
 
+/** Local testing only. Never set SKIP_OTP in production. */
+export function isOtpBypass(): boolean {
+  return process.env.NODE_ENV !== "production" && process.env.SKIP_OTP === "1";
+}
+
 export function isTwilioConfigured(): boolean {
   return Boolean(
     process.env.TWILIO_ACCOUNT_SID &&

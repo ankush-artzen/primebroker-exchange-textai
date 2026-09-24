@@ -36,7 +36,7 @@ async function request<T>(
 
 export const api = {
   sendOtp(phone: string) {
-    return request<{ ok: true }>("/api/auth/send-otp", {
+    return request<{ ok: true; skipOtp?: boolean }>("/api/auth/send-otp", {
       method: "POST",
       body: JSON.stringify({ phone }),
     });

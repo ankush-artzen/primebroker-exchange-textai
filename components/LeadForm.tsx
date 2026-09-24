@@ -1,10 +1,6 @@
 "use client";
 
-<<<<<<< HEAD
-import { useEffect, useState } from "react";
-=======
 import { useEffect, useRef, useState } from "react";
->>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
 import type { LeadFormData } from "@/lib/types";
 import {
   cn,
@@ -242,20 +238,6 @@ export function LeadForm({
         variant={variant}
       />
 
-<<<<<<< HEAD
-      <div>
-        <label className="mb-1.5 block text-xs font-semibold text-muted">
-          Notes
-        </label>
-        <textarea
-          value={form.notes ?? ""}
-          onChange={(e) => update("notes", e.target.value)}
-          rows={isAdd ? 2 : 3}
-          placeholder={isAdd ? "Anything else worth remembering" : undefined}
-          className="w-full rounded-[10px] border border-border bg-surface px-3 py-2.5 text-sm text-primary outline-none focus:border-primary"
-        />
-      </div>
-=======
       <NotesField
         value={form.notes ?? ""}
         onChange={(v) => update("notes", v)}
@@ -263,7 +245,6 @@ export function LeadForm({
         placeholder={isAdd ? "Anything else worth remembering" : undefined}
         variant={variant}
       />
->>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
 
       <button
         type="submit"
@@ -416,10 +397,6 @@ function FollowUpDateField({
     { label: "Today", days: 0 },
     { label: "Tomorrow", days: 1 },
     { label: "3 days", days: 3 },
-<<<<<<< HEAD
-    { label: "1 week", days: 7 },
-=======
->>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
   ];
 
   const getDateTimeKey = (days: number) => {
@@ -481,8 +458,6 @@ function FollowUpDateField({
   );
 }
 
-<<<<<<< HEAD
-=======
 function NotesField({
   value,
   onChange,
@@ -530,7 +505,6 @@ function NotesField({
   );
 }
 
->>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
 function Field({
   label,
   value,
