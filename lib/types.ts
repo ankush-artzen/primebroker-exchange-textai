@@ -67,8 +67,4 @@ export type PropertyFormData = Omit<
   "id" | "userId" | "createdAt" | "updatedAt"
 >;
 
-<<<<<<< HEAD
-export type SpeechLanguage = "en-IN" | "hi-IN" | "pa-IN";
-=======
 export type SpeechLanguage = "en-IN" | "hi-IN" | "pa-IN" | "hinglish";
->>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6

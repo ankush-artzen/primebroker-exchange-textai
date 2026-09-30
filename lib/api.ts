@@ -134,6 +134,16 @@ export const api = {
     });
   },
 
+  transcribe(file: File, language: string) {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("language", language);
+    return request<{ transcript: string; languageCode: string | null }>(
+      "/api/ai/transcribe",
+      { method: "POST", body: form },
+    );
+  },
+
   uploadPhotos(files: File[]) {
     const form = new FormData();
     files.forEach((f) => form.append("files", f));
