@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String     @id @default(auto()) @map("_id") @db.ObjectId
+  name              String
+  phone             String     @unique
+  profilePictureUrl String?
+  createdAt         DateTime   @default(now())
+  leads             Lead[]
+  properties        Property[]
+}
+
+model Lead {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String    @db.ObjectId
+  user         User      @relation(fields: [userId], references: [id])
+  name         String
+  phone        String
+  requirement  String?
+  location     String?
+  budget       String?
+  source       String?
+  notes        String?
+  followUpDate DateTime?
+  followUpDone Boolean   @default(false)
+  status       String    @default("new")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([followUpDate])
+}
+
+model Property {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String   @db.ObjectId
+  user          User     @relation(fields: [userId], references: [id])
+  title         String
+  location      String
+  price         String
+  configuration String?
+  area          String?
+  availability  String?
+  notes         String?
+  photoUrls     String[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+}

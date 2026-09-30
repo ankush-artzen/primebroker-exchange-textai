@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f1f2f0;
+  --foreground: #1c2230;
+  --surface: #ffffff;
+  --muted: #6b7280;
+
+  --primary: #D4AF37 ;
+  --primary-foreground: #ffffff;
+
+  --secondary: #a9762a;
+  --secondary-foreground: #ffffff;
+  --secondary-dark: #8c6222;
+  --secondary-tint: #f3e9da;
+
+  --overdue: #fce8e8;
+  --overdue-muted: #A52A2A;
+  --overdue-tint: #fce8e8;
+
+  --today: #c97c1d;
+  --today-tint: #fbedda;
+
+  --ok: #1f6f54;
+  --ok-tint: #e3f0eb;
+
+  --upcoming: #ededea;
+
+  --border: #e5e4e0;
+
+  --call: #f3e9da;
+  --call-foreground: #8c6222;
+
+  --whatsapp: #e3f0eb;
+  --whatsapp-foreground: #1f6f54;
+  --whatsapp-brand: #25d366;
+  --whatsapp-brand-active: #1da851;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary-dark: var(--secondary-dark);
+  --color-secondary-tint: var(--secondary-tint);
+  --color-overdue: var(--overdue);
+  --color-overdue-muted: var(--overdue-muted);
+  --color-overdue-tint: var(--overdue-tint);
+  --color-today: var(--today);
+  --color-today-tint: var(--today-tint);
+  --color-ok: var(--ok);
+  --color-ok-tint: var(--ok-tint);
+  --color-upcoming: var(--upcoming);
+  --color-border: var(--border);
+  --color-call: var(--call);
+  --color-call-foreground: var(--call-foreground);
+  --color-whatsapp: var(--whatsapp);
+  --color-whatsapp-foreground: var(--whatsapp-foreground);
+  --color-whatsapp-brand: var(--whatsapp-brand);
+  --color-whatsapp-brand-active: var(--whatsapp-brand-active);
+  --font-sans: var(--font-geist-sans);
+  --font-serif: var(--font-playfair), Georgia, "Times New Roman", serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input,
+textarea,
+select,
+button {
+  font-size: 16px;
+}
