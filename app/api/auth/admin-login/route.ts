@@ -12,6 +12,7 @@ export async function POST(request: NextRequest) {
     const normalizedUsername = String(username ?? "").trim().toLowerCase();
     const plainPassword = String(password ?? "");
 
+    // added
     if (!normalizedUsername || !plainPassword) {
       return Response.json(
         { error: "Username and password are required" },
