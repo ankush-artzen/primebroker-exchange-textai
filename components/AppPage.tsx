@@ -30,12 +30,19 @@ export function AppPage({ children, title, subtitle, action, header }: Props) {
   );
 }
 
-export function AddButton({ onClick }: { onClick: () => void }) {
+export function AddButton({
+  onClick,
+  disabled,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+      disabled={disabled}
+      className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
     >
       + Add
     </button>

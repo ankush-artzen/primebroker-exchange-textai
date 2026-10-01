@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { getStoredUserId } from "@/lib/storage";
+import { getStoredSessionToken } from "@/lib/storage";
 import { Spinner } from "@/components/Loader";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -11,8 +11,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const userId = getStoredUserId();
-    if (!userId) {
+    const sessionToken = getStoredSessionToken();
+    if (!sessionToken) {
       router.replace("/onboarding");
     } else {
       setReady(true);

@@ -172,6 +172,9 @@ export function LeadDetailSheet({
               <Phone size={14} className="shrink-0" />
               {normalizeIndianPhone(lead.phone)}
             </p>
+            {lead.ownerName && (
+              <p className="mt-1 text-[12px] text-muted">Broker · {lead.ownerName}</p>
+            )}
             {/* <p className="mt-1 flex items-center gap-1.5 text-[12px] text-muted">
               <Clock size={13} className="shrink-0" />
               Created {formatDateTime(lead.createdAt)}

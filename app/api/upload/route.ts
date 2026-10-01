@@ -1,11 +1,11 @@
 import { NextRequest } from "next/server";
-import { getUserId, unauthorized } from "@/lib/api-auth";
+import { getAuthUser, unauthorized } from "@/lib/api-auth";
 import { deleteCloudinaryImages, isCloudinaryConfigured } from "@/lib/cloudinary";
 import { v2 as cloudinary } from "cloudinary";
 
 export async function POST(request: NextRequest) {
-  const userId = getUserId(request);
-  if (!userId) return unauthorized();
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
 
   if (!isCloudinaryConfigured()) {
     return Response.json(

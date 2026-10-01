@@ -1,9 +1,19 @@
+export type Role = "USER" | "ADMIN" | "SUPERADMIN";
+
 export interface User {
   id: string;
   name: string;
-  phone: string;
+  phone: string | null;
+  username?: string | null;
+  role: Role;
+  canAddUsers?: boolean;
+  userLimit?: number;
+  usersCreated?: number;
+  disabled?: boolean;
+  createdByName?: string | null;
   profilePictureUrl?: string | null;
   createdAt: string;
+  sessionToken?: string;
 }
 
 export type UserProfileData = Pick<User, "name" | "phone" | "profilePictureUrl">;
@@ -17,6 +27,7 @@ export interface OtpVerifyResult {
 export interface Lead {
   id: string;
   userId: string;
+  ownerName?: string | null;
   name: string;
   phone: string;
   requirement?: string | null;
@@ -34,6 +45,7 @@ export interface Lead {
 export interface Property {
   id: string;
   userId: string;
+  ownerName?: string | null;
   title: string;
   location: string;
   price: string;

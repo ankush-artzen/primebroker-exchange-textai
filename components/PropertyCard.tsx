@@ -100,6 +100,12 @@ export function PropertyCard({ property, onClick }: Props) {
               {property.title}
             </TruncatedText>
 
+            {property.ownerName && (
+              <p className="mt-0.5 text-[11px] font-medium text-muted">
+                {property.ownerName}
+              </p>
+            )}
+
             {(property.configuration || property.location) && (
               <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[12.5px] text-muted">
                 {property.configuration && (

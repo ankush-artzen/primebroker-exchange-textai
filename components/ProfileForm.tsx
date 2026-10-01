@@ -35,7 +35,7 @@ function mapApiError(message: string): Partial<Record<ProfileField, string>> {
 export function ProfileForm({ user, onUpdated }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(user.name);
-  const [phone, setPhone] = useState(user.phone);
+  const [phone, setPhone] = useState(user.phone ?? "");
   const [avatarUrl, setAvatarUrl] = useState(user.profilePictureUrl ?? "");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -54,6 +54,8 @@ export function ProfileForm({ user, onUpdated }: Props) {
     if (error) setError("");
   };
 
+  const isStaff = user.role === "ADMIN" || user.role === "SUPERADMIN";
+
   const validate = () => {
     const errors: Partial<Record<ProfileField, string>> = {};
 
@@ -62,9 +64,9 @@ export function ProfileForm({ user, onUpdated }: Props) {
     } else if (!isValidPersonName(name)) {
       errors.name = "Name can only contain letters";
     }
-    if (!phone.trim()) {
+    if (!isStaff && !phone.trim()) {
       errors.phone = "Phone number is required";
-    } else if (!isValidIndianPhone(phone)) {
+    } else if (!isStaff && !isValidIndianPhone(phone)) {
       errors.phone = "Enter a valid 10-digit mobile number";
     }
 
@@ -112,7 +114,7 @@ export function ProfileForm({ user, onUpdated }: Props) {
     try {
       const updated = await api.updateProfile({
         name: name.trim(),
-        phone: phone.trim(),
+        ...(isStaff ? {} : { phone: phone.trim() }),
         profilePictureUrl: avatarUrl || null,
       });
 
@@ -122,6 +124,10 @@ export function ProfileForm({ user, onUpdated }: Props) {
           name: updated.name,
           phone: updated.phone,
           profilePictureUrl: updated.profilePictureUrl,
+          role: updated.role,
+          username: updated.username,
+          canAddUsers: updated.canAddUsers,
+          userLimit: updated.userLimit,
         });
       }
 
@@ -191,16 +197,25 @@ export function ProfileForm({ user, onUpdated }: Props) {
         placeholder="Your name"
         error={fieldErrors.name}
       />
-      <PhoneField
-        value={phone}
-        onChange={(value) => {
-          setPhone(value);
-          clearFieldError("phone");
-        }}
-        label="Phone"
-        variant="add"
-        error={fieldErrors.phone}
-      />
+      {isStaff ? (
+        <div>
+          <p className="mb-1.5 text-xs font-semibold text-muted">Username</p>
+          <p className="rounded-[10px] border border-border bg-background px-3 py-2.5 text-sm text-primary">
+            {user.username}
+          </p>
+        </div>
+      ) : (
+        <PhoneField
+          value={phone}
+          onChange={(value) => {
+            setPhone(value);
+            clearFieldError("phone");
+          }}
+          label="Phone"
+          variant="add"
+          error={fieldErrors.phone}
+        />
+      )}
 
       <button
         type="submit"

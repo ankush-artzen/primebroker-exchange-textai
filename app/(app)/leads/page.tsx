@@ -1,14 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Lead } from "@/lib/types";
 import { api } from "@/lib/api";
+import { useAccess } from "@/components/AccessProvider";
+import { isStaffRole } from "@/lib/roles";
 import { LeadCard } from "@/components/LeadCard";
 import { LeadDetailSheet } from "@/components/LeadDetailSheet";
 import { AddButton, AppPage } from "@/components/AppPage";
 import { ListSkeleton } from "@/components/Loader";
 import { ListPagination } from "@/components/ListPagination";
+import { OwnerFilter } from "@/components/OwnerFilter";
 import { usePagination } from "@/hooks/usePagination";
 import {
   cn,
@@ -26,7 +29,13 @@ const filters: { id: LeadFilter; label: string }[] = [
 
 export default function LeadsPage() {
   const router = useRouter();
+  const { role } = useAccess();
+  const isSuperAdmin = role === "SUPERADMIN";
+  const staff = isStaffRole(role);
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [ownerId, setOwnerId] = useState("");
+  const [nameInput, setNameInput] = useState("");
+  const [nameQuery, setNameQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Lead | null>(null);
   const [filter, setFilter] = useState<LeadFilter>("all");
@@ -47,12 +56,45 @@ export default function LeadsPage() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => setNameQuery(nameInput.trim()), 300);
+    return () => window.clearTimeout(timer);
+  }, [nameInput]);
+
+  const ownersWithLeads = useMemo(() => {
+    const byId = new Map<string, string>();
+    for (const lead of leads) {
+      if (!byId.has(lead.userId)) {
+        byId.set(lead.userId, lead.ownerName?.trim() || "Unknown user");
+      }
+    }
+    return [...byId.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [leads]);
+
   const filtered = useMemo(() => {
-    return leads.filter((lead) => matchesLeadFilter(lead, filter));
-  }, [leads, filter]);
+    const needle = nameQuery.toLowerCase();
+    const matched = leads.filter((lead) => {
+      const statusOk = matchesLeadFilter(lead, filter);
+      const ownerOk = !ownerId || lead.userId === ownerId;
+      const nameOk =
+        Boolean(ownerId) ||
+        !needle ||
+        lead.name.toLowerCase().includes(needle) ||
+        (lead.ownerName || "").toLowerCase().includes(needle);
+      return statusOk && ownerOk && nameOk;
+    });
+    if (!isSuperAdmin) return matched;
+    return [...matched].sort(
+      (a, b) =>
+        (a.ownerName || "").localeCompare(b.ownerName || "") ||
+        a.name.localeCompare(b.name),
+    );
+  }, [leads, filter, ownerId, nameQuery, isSuperAdmin]);
 
   const { page, setPage, totalPages, paginatedItems, pageSize, total } =
-    usePagination(filtered, filter);
+    usePagination(filtered, `${filter}:${ownerId}:${nameQuery}`);
 
   return (
     <AppPage
@@ -60,10 +102,40 @@ export default function LeadsPage() {
       subtitle={
         loading
           ? "Loading…"
-          : `${leads.length} ${leads.length === 1 ? "lead" : "leads"}`
+          : isSuperAdmin
+            ? "Each user's leads. Edit or delete, without adding new ones."
+            : `${leads.length} ${leads.length === 1 ? "lead" : "leads"}`
       }
-      action={<AddButton onClick={() => router.push("/leads/create")} />}
+      action={
+        staff ? undefined : (
+          <AddButton onClick={() => router.push("/leads/create")} />
+        )
+      }
     >
+      {isSuperAdmin && (
+        <OwnerFilter
+          searchable
+          users={ownersWithLeads}
+          value={ownerId}
+          onChange={setOwnerId}
+          query={nameInput}
+          onQueryChange={setNameInput}
+          placeholder="Search a user who has leads"
+        />
+      )}
+      {!isSuperAdmin && (
+        <label className="mb-4 block">
+          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted">
+            Search name
+          </span>
+          <input
+            value={nameInput}
+            placeholder="Search lead name"
+            onChange={(event) => setNameInput(event.target.value)}
+            className="w-full rounded-[10px] border border-border bg-surface px-3 py-2.5 text-sm text-primary outline-none focus:border-primary"
+          />
+        </label>
+      )}
       <div className="mb-4 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
         {filters.map((chip) => (
           <button
@@ -92,19 +164,36 @@ export default function LeadsPage() {
             className="mx-auto mb-3 text-upcoming"
           />
           {leads.length === 0
-            ? "No leads yet — tap + Add to create your first one."
-            : "No leads match this filter."}
+            ? staff
+              ? "No leads yet."
+              : "No leads yet — tap + Add to create your first one."
+            : nameQuery
+              ? "No leads match that name."
+              : ownerId
+                ? "This user has no leads in this filter."
+                : "No leads match this filter."}
         </div>
       ) : (
         <>
           <div className="grid gap-2.5 lg:grid-cols-2 lg:gap-4">
-            {paginatedItems.map((lead) => (
-              <LeadCard
-                key={lead.id}
-                lead={lead}
-                onClick={() => setSelected(lead)}
-              />
-            ))}
+            {paginatedItems.map((lead, index) => {
+              const previous = paginatedItems[index - 1];
+              const showOwner =
+                isSuperAdmin &&
+                !ownerId &&
+                (index === 0 || previous?.userId !== lead.userId);
+
+              return (
+                <Fragment key={lead.id}>
+                  {showOwner && (
+                    <h2 className="col-span-full pt-1 text-xs font-semibold uppercase tracking-wide text-muted">
+                      {lead.ownerName || "Unknown user"}
+                    </h2>
+                  )}
+                  <LeadCard lead={lead} onClick={() => setSelected(lead)} />
+                </Fragment>
+              );
+            })}
           </div>
           <ListPagination
             page={page}

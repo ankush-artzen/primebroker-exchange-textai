@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronRight, LandPlot, User } from "lucide-react";
+import { ChevronDown, ChevronRight, LandPlot, Shield, User } from "lucide-react";
+import { isStaffRole, mayAddUsers, roleLabel } from "@/lib/roles";
 import type { User as UserProfile } from "@/lib/types";
 import { api } from "@/lib/api";
 import { getStoredUserId, setStoredUser } from "@/lib/storage";
@@ -46,6 +47,10 @@ export default function AccountPage() {
           name: data.name,
           phone: data.phone,
           profilePictureUrl: data.profilePictureUrl,
+          role: data.role,
+          username: data.username,
+          canAddUsers: data.canAddUsers,
+          userLimit: data.userLimit,
         });
       }
     } catch (err) {
@@ -96,7 +101,14 @@ export default function AccountPage() {
               />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold text-primary">{profile.name}</p>
-                <p className="truncate text-sm text-muted">{profile.phone}</p>
+                <p className="truncate text-sm text-muted">
+                  {isStaffRole(profile.role) ? profile.username : profile.phone}
+                </p>
+                {isStaffRole(profile.role) && (
+                  <span className="mt-1 inline-flex rounded-full bg-secondary-tint px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary">
+                    {roleLabel(profile.role)}
+                  </span>
+                )}
               </div>
             </>
           ) : null}
@@ -137,15 +149,48 @@ export default function AccountPage() {
           Quick links
         </h2>
         <div className="overflow-hidden rounded-[14px] border border-border bg-surface shadow-sm">
-          {quickLinks.map((link, index) => {
+          {(profile?.role === "SUPERADMIN"
+            ? [
+                {
+                  href: "/users",
+                  label: "Users",
+                  icon: Shield,
+                  description: "Add, edit, and remove users. Set each admin's limit.",
+                },
+                {
+                  href: "/leads",
+                  label: "Leads",
+                  icon: User,
+                  description: "View, edit, and delete each user's leads",
+                },
+                {
+                  href: "/properties",
+                  label: "Properties",
+                  icon: LandPlot,
+                  description: "View, edit, and delete each user's properties",
+                },
+              ]
+            : profile && mayAddUsers(profile.role, profile.userLimit)
+              ? [
+                  {
+                    href: "/users",
+                    label: "Users",
+                    icon: Shield,
+                    description: "Add broker accounts",
+                  },
+                  ...quickLinks,
+                ]
+              : quickLinks
+          ).map((link, index, links) => {
             const Icon = link.icon;
+            
 
             return (
               <Link
                 key={link.href}
                 href={link.href}
                 className={`flex items-center gap-3 px-4 py-3.5 transition-colors active:bg-background ${
-                  index < quickLinks.length - 1 ? "border-b border-border" : ""
+                  index < links.length - 1 ? "border-b border-border" : ""
                 }`}
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-ok-tint text-ok">

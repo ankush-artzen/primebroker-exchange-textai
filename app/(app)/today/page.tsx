@@ -13,6 +13,8 @@ import {
   isTodayFollowUpTimePassed,
   shouldShowOnTodayPage,
 } from "@/lib/utils";
+import { useAccess } from "@/components/AccessProvider";
+import { isStaffRole } from "@/lib/roles";
 import { LeadCard } from "@/components/LeadCard";
 import { LeadDetailSheet } from "@/components/LeadDetailSheet";
 import { AppPage } from "@/components/AppPage";
@@ -21,6 +23,8 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { AlertCircle, CircleCheck } from "lucide-react";
 
 export default function TodayPage() {
+  const { role } = useAccess();
+  const staff = isStaffRole(role);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [propertiesCount, setPropertiesCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -151,12 +155,14 @@ export default function TodayPage() {
             <p className="text-sm text-muted">
               No follow-ups left for today right now.
             </p>
-            <Link
-              href="/leads/create"
-              className="mt-5 inline-block rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground"
-            >
-              Add a lead
-            </Link>
+            {!staff && (
+              <Link
+                href="/leads/create"
+                className="mt-5 inline-block rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground"
+              >
+                Add a lead
+              </Link>
+            )}
           </div>
         ) : (
           <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">

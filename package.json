@@ -1,5 +1,5 @@
 {
-  "name": "my-app",
+  "name": "Broker-Exchange",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -8,11 +8,14 @@
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
-    "db:push": "prisma db push"
+    "db:push": "prisma db push",
+    "admin:create": "node scripts/create-admin.mjs",
+    "superadmin:create": "node scripts/create-admin.mjs superadmin"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.122.0",
     "@prisma/client": "^6.9.0",
+    
     "cloudinary": "^2.11.0",
     "framer-motion": "^13.1.1",
     "leaflet": "^1.9.4",

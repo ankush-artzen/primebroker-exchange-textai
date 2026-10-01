@@ -3,7 +3,8 @@
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { clearStoredUser } from "@/lib/storage";
+import { isStaffRole } from "@/lib/roles";
+import { clearStoredUser, getStoredRole } from "@/lib/storage";
 
 interface Props {
   className?: string;
@@ -13,8 +14,9 @@ export function LogoutButton({ className }: Props) {
   const router = useRouter();
 
   const handleLogout = () => {
+    const staff = isStaffRole(getStoredRole());
     clearStoredUser();
-    router.replace("/onboarding");
+    router.replace(staff ? "/admin/login" : "/onboarding");
   };
 
   return (

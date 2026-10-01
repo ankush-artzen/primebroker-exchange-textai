@@ -1,26 +1,30 @@
 import { NextRequest } from "next/server";
-import { getUserId, unauthorized } from "@/lib/api-auth";
+import { isAdmin, propertyOwned } from "@/lib/access";
+import { getAuthUser, unauthorized } from "@/lib/api-auth";
 import { deleteCloudinaryImages } from "@/lib/cloudinary";
 import { prisma } from "@/lib/prisma";
+import { ownerNames, serializeProperty } from "@/lib/records";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
-  const userId = getUserId(request);
-  if (!userId) return unauthorized();
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
 
   const { id } = await params;
 
   try {
-    const property = await prisma.property.findFirst({ where: { id, userId } });
+    const property = await prisma.property.findFirst({
+      where: propertyOwned(user, id),
+    });
     if (!property) {
       return Response.json({ error: "Property not found" }, { status: 404 });
     }
 
+    const names = isAdmin(user) ? await ownerNames([property.userId]) : null;
     return Response.json({
-      ...property,
-      createdAt: property.createdAt.toISOString(),
-      updatedAt: property.updatedAt.toISOString(),
+      ...serializeProperty(property, false),
+      ...(names ? { ownerName: names.get(property.userId) ?? null } : {}),
     });
   } catch (error) {
     console.error("get property error:", error);
@@ -29,13 +33,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 }
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
-  const userId = getUserId(request);
-  if (!userId) return unauthorized();
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
 
   const { id } = await params;
 
   try {
-    const existing = await prisma.property.findFirst({ where: { id, userId } });
+    const existing = await prisma.property.findFirst({
+      where: propertyOwned(user, id),
+    });
     if (!existing) {
       return Response.json({ error: "Property not found" }, { status: 404 });
     }
@@ -79,13 +85,15 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 }
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
-  const userId = getUserId(request);
-  if (!userId) return unauthorized();
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
 
   const { id } = await params;
 
   try {
-    const existing = await prisma.property.findFirst({ where: { id, userId } });
+    const existing = await prisma.property.findFirst({
+      where: propertyOwned(user, id),
+    });
     if (!existing) {
       return Response.json({ error: "Property not found" }, { status: 404 });
     }

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type Ref } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -119,10 +120,19 @@ export default function OnboardingPage() {
   }, [step]);
 
   const completeLogin = (user: User) => {
+    if (!user.sessionToken) {
+      setError("Could not start your session. Try again.");
+      return;
+    }
     setStoredUser(user.id, {
       name: user.name,
       phone: user.phone,
       profilePictureUrl: user.profilePictureUrl,
+      role: user.role,
+      username: user.username,
+      canAddUsers: user.canAddUsers,
+      userLimit: user.userLimit,
+      sessionToken: user.sessionToken,
     });
     router.replace("/today");
   };
@@ -458,6 +468,13 @@ export default function OnboardingPage() {
                 <ShieldCheck size={14} className="shrink-0 text-ok" />
                 OTP login · No password needed
               </p>
+              {step === "phone" && (
+                <p className="mt-3 text-center text-[12px] text-muted">
+                  <Link href="/admin/login" className="font-semibold text-primary">
+                    Admin sign in
+                  </Link>
+                </p>
+              )}
             </div>
           </form>
         </section>

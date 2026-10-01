@@ -1,22 +1,28 @@
 import { NextRequest } from "next/server";
-import { getUserId, unauthorized } from "@/lib/api-auth";
+import { isAdmin, propertyScope } from "@/lib/access";
+import { getAuthUser, unauthorized } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
+import { ownerNames, serializeProperty } from "@/lib/records";
 
 export async function GET(request: NextRequest) {
-  const userId = getUserId(request);
-  if (!userId) return unauthorized();
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
 
   try {
     const properties = await prisma.property.findMany({
-      where: { userId },
+      where: propertyScope(user),
       orderBy: { updatedAt: "desc" },
     });
+    const names = isAdmin(user)
+      ? await ownerNames(properties.map((property) => property.userId))
+      : null;
 
     return Response.json(
-      properties.map((p) => ({
-        ...p,
-        createdAt: p.createdAt.toISOString(),
-        updatedAt: p.updatedAt.toISOString(),
+      properties.map((property) => ({
+        ...serializeProperty(property, false),
+        ...(names
+          ? { ownerName: names.get(property.userId) ?? null }
+          : {}),
       })),
     );
   } catch (error) {
@@ -29,8 +35,14 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const userId = getUserId(request);
-  if (!userId) return unauthorized();
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
+  if (isAdmin(user)) {
+    return Response.json(
+      { error: "Only brokers can add properties" },
+      { status: 403 },
+    );
+  }
 
   try {
     const body = await request.json();
@@ -54,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     const property = await prisma.property.create({
       data: {
-        userId,
+        userId: user.id,
         title: title.trim(),
         location: location.trim(),
         price: price.trim(),

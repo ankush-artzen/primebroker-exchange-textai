@@ -82,6 +82,7 @@ export function PropertyDetailSheet({
           onClose={() => setZoomedUrl(null)}
         />
 
+        <InfoRow label="Broker" value={property.ownerName} />
         <InfoRow label="Location" value={property.location} />
         <InfoRow label="Price" value={property.price} />
         <InfoRow label="Configuration" value={property.configuration} />

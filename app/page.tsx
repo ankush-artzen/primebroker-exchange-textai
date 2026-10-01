@@ -2,15 +2,16 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getStoredUserId } from "@/lib/storage";
+import { homePath } from "@/lib/roles";
+import { getStoredRole, getStoredSessionToken } from "@/lib/storage";
 import { Spinner } from "@/components/Loader";
 
 export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    const userId = getStoredUserId();
-    router.replace(userId ? "/today" : "/onboarding");
+    const sessionToken = getStoredSessionToken();
+    router.replace(sessionToken ? homePath(getStoredRole()) : "/onboarding");
   }, [router]);
 
   return (

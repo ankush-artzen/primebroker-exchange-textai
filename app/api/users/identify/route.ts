@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import { readOtpToken } from "@/lib/otp-token";
 import { prisma } from "@/lib/prisma";
+import { createSessionToken } from "@/lib/session";
+import { serializeUser } from "@/lib/user";
 import {
   formatPhone,
   isValidPersonName,
@@ -17,7 +19,6 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
-
     const normalizedPhone = normalizeIndianPhone(formatPhone(phone));
     const verifiedPhone = readOtpToken(verificationToken);
 
@@ -32,14 +33,17 @@ export async function POST(request: NextRequest) {
       where: { phone: normalizedPhone },
     });
 
+    if (existing?.disabled) {
+      return Response.json(
+        { error: "This account is disabled" },
+        { status: 403 },
+      );
+    }
+
     if (existing) {
-      return Response.json({
-        id: existing.id,
-        name: existing.name,
-        phone: existing.phone,
-        profilePictureUrl: existing.profilePictureUrl,
-        createdAt: existing.createdAt.toISOString(),
-      });
+      return Response.json(
+        serializeUser(existing, createSessionToken(existing.id)),
+      );
     }
 
     const trimmedName = name?.trim();
@@ -57,16 +61,11 @@ export async function POST(request: NextRequest) {
       data: {
         name: trimmedName,
         phone: normalizedPhone,
+        role: "USER",
       },
     });
 
-    return Response.json({
-      id: user.id,
-      name: user.name,
-      phone: user.phone,
-      profilePictureUrl: user.profilePictureUrl,
-      createdAt: user.createdAt.toISOString(),
-    });
+    return Response.json(serializeUser(user, createSessionToken(user.id)));
   } catch (error) {
     console.error("identify error:", error);
     return Response.json({ error: "Failed to identify user" }, { status: 500 });

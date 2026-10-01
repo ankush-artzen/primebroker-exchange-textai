@@ -34,7 +34,7 @@ function VoiceHintBanner({ onDismiss }: { onDismiss: () => void }) {
   return (
     <div className="flex items-center justify-between gap-2 rounded-xl border border-[#bfe0d2] bg-[#eaf3ef] px-3 py-2.5 text-xs leading-relaxed text-ok">
       <span>
-        New: tap the mic and just speak — Hindi, Punjabi or English all work.
+        Tap the mic and speak — Hindi, English, Punjabi, or Hinglish.
       </span>
       <button
         type="button"

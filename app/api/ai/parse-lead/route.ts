@@ -123,7 +123,9 @@ export async function POST(request: NextRequest) {
         ? "Hindi"
         : language === "pa-IN"
           ? "Punjabi"
-          : "English";
+          : language === "hinglish"
+            ? "Hinglish"
+            : "English";
 
     const prompt = extractionPrompt(text, langLabel);
     const raw =

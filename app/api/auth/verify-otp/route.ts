@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import { createOtpToken } from "@/lib/otp-token";
 import { prisma } from "@/lib/prisma";
+import { createSessionToken } from "@/lib/session";
+import { serializeUser } from "@/lib/user";
 import {
   checkVerificationSms,
   isOtpBypass,
@@ -54,17 +56,18 @@ export async function POST(request: NextRequest) {
       where: { phone: normalizedPhone },
     });
 
+    if (user?.disabled) {
+      return Response.json(
+        { error: "This account is disabled" },
+        { status: 403 },
+      );
+    }
+
     return Response.json({
       verified: true,
       token,
       user: user
-        ? {
-            id: user.id,
-            name: user.name,
-            phone: user.phone,
-            profilePictureUrl: user.profilePictureUrl,
-            createdAt: user.createdAt.toISOString(),
-          }
+        ? serializeUser(user, createSessionToken(user.id))
         : null,
     });
   } catch (error) {

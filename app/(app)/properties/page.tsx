@@ -1,14 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Property } from "@/lib/types";
 import { api } from "@/lib/api";
+import { useAccess } from "@/components/AccessProvider";
+import { isStaffRole } from "@/lib/roles";
 import { PropertyCard } from "@/components/PropertyCard";
 import { PropertyDetailSheet } from "@/components/PropertyDetailSheet";
 import { AddButton, AppPage } from "@/components/AppPage";
 import { PropertyListSkeleton } from "@/components/Loader";
 import { ListPagination } from "@/components/ListPagination";
+import { OwnerFilter } from "@/components/OwnerFilter";
 import { usePagination } from "@/hooks/usePagination";
 import { cn, getPropertyStatus } from "@/lib/utils";
 import { House } from "lucide-react";
@@ -24,7 +27,13 @@ const filters: { id: PropertyFilter; label: string }[] = [
 
 export default function PropertiesPage() {
   const router = useRouter();
+  const { role } = useAccess();
+  const isSuperAdmin = role === "SUPERADMIN";
+  const staff = isStaffRole(role);
   const [properties, setProperties] = useState<Property[]>([]);
+  const [ownerId, setOwnerId] = useState("");
+  const [nameInput, setNameInput] = useState("");
+  const [nameQuery, setNameQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Property | null>(null);
   const [filter, setFilter] = useState<PropertyFilter>("all");
@@ -45,15 +54,45 @@ export default function PropertiesPage() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => setNameQuery(nameInput.trim()), 300);
+    return () => window.clearTimeout(timer);
+  }, [nameInput]);
+
+  const ownersWithProperties = useMemo(() => {
+    const byId = new Map<string, string>();
+    for (const property of properties) {
+      if (!byId.has(property.userId)) {
+        byId.set(property.userId, property.ownerName?.trim() || "Unknown user");
+      }
+    }
+    return [...byId.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [properties]);
+
   const filtered = useMemo(() => {
-    return properties.filter((property) => {
-      if (filter === "all") return true;
-      return getPropertyStatus(property) === filter;
+    const needle = nameQuery.toLowerCase();
+    const matched = properties.filter((property) => {
+      const statusOk = filter === "all" || getPropertyStatus(property) === filter;
+      const ownerOk = !ownerId || property.userId === ownerId;
+      const nameOk =
+        Boolean(ownerId) ||
+        !needle ||
+        property.title.toLowerCase().includes(needle) ||
+        (property.ownerName || "").toLowerCase().includes(needle);
+      return statusOk && ownerOk && nameOk;
     });
-  }, [properties, filter]);
+    if (!isSuperAdmin) return matched;
+    return [...matched].sort(
+      (a, b) =>
+        (a.ownerName || "").localeCompare(b.ownerName || "") ||
+        a.title.localeCompare(b.title),
+    );
+  }, [properties, filter, ownerId, nameQuery, isSuperAdmin]);
 
   const { page, setPage, totalPages, paginatedItems, pageSize, total } =
-    usePagination(filtered, filter);
+    usePagination(filtered, `${filter}:${ownerId}:${nameQuery}`);
 
   return (
     <AppPage
@@ -61,10 +100,40 @@ export default function PropertiesPage() {
       subtitle={
         loading
           ? "Loading…"
-          : `${properties.length} ${properties.length === 1 ? "property" : "properties"}`
+          : isSuperAdmin
+            ? "Each user's properties. Edit or delete, without adding new ones."
+            : `${properties.length} ${properties.length === 1 ? "property" : "properties"}`
       }
-      action={<AddButton onClick={() => router.push("/properties/new")} />}
+      action={
+        staff ? undefined : (
+          <AddButton onClick={() => router.push("/properties/new")} />
+        )
+      }
     >
+      {isSuperAdmin && (
+        <OwnerFilter
+          searchable
+          users={ownersWithProperties}
+          value={ownerId}
+          onChange={setOwnerId}
+          query={nameInput}
+          onQueryChange={setNameInput}
+          placeholder="Search a user who has properties"
+        />
+      )}
+      {!isSuperAdmin && (
+        <label className="mb-4 block">
+          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted">
+            Search name
+          </span>
+          <input
+            value={nameInput}
+            placeholder="Search property name"
+            onChange={(event) => setNameInput(event.target.value)}
+            className="w-full rounded-[10px] border border-border bg-surface px-3 py-2.5 text-sm text-primary outline-none focus:border-primary"
+          />
+        </label>
+      )}
       <div className="mb-4 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
         {filters.map((chip) => (
           <button
@@ -93,19 +162,39 @@ export default function PropertiesPage() {
             className="mx-auto mb-3 text-upcoming"
           />
           {properties.length === 0
-            ? "No properties yet — tap + Add to create your first listing."
-            : "No properties match this filter."}
+            ? staff
+              ? "No properties yet."
+              : "No properties yet — tap + Add to create your first listing."
+            : nameQuery
+              ? "No properties match that name."
+              : ownerId
+                ? "This user has no properties in this filter."
+                : "No properties match this filter."}
         </div>
       ) : (
         <>
           <div className="grid gap-2.5 lg:grid-cols-2 lg:gap-4">
-            {paginatedItems.map((property) => (
-              <PropertyCard
-                key={property.id}
-                property={property}
-                onClick={() => setSelected(property)}
-              />
-            ))}
+            {paginatedItems.map((property, index) => {
+              const previous = paginatedItems[index - 1];
+              const showOwner =
+                isSuperAdmin &&
+                !ownerId &&
+                (index === 0 || previous?.userId !== property.userId);
+
+              return (
+                <Fragment key={property.id}>
+                  {showOwner && (
+                    <h2 className="col-span-full pt-1 text-xs font-semibold uppercase tracking-wide text-muted">
+                      {property.ownerName || "Unknown user"}
+                    </h2>
+                  )}
+                  <PropertyCard
+                    property={property}
+                    onClick={() => setSelected(property)}
+                  />
+                </Fragment>
+              );
+            })}
           </div>
           <ListPagination
             page={page}

@@ -104,6 +104,12 @@ export function LeadCard({ lead, onClick }: Props) {
                 </span>
               </div>
 
+              {lead.ownerName && (
+                <p className="mt-0.5 text-[11px] font-medium text-muted">
+                  {lead.ownerName}
+                </p>
+              )}
+
               {followUpLabel && (
                 <p
                   className={cn(

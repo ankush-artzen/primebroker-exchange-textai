@@ -1,44 +1,21 @@
 import { NextRequest } from "next/server";
-import { getUserId, unauthorized } from "@/lib/api-auth";
+import { getAuthUser, unauthorized } from "@/lib/api-auth";
 import { deleteCloudinaryImages } from "@/lib/cloudinary";
 import { prisma } from "@/lib/prisma";
+import { countCreatedUsers, serializeUser } from "@/lib/user";
 import { formatPhone } from "@/lib/utils";
 
-function serializeUser(user: {
-  id: string;
-  name: string;
-  phone: string;
-  profilePictureUrl: string | null;
-  createdAt: Date;
-}) {
-  return {
-    id: user.id,
-    name: user.name,
-    phone: user.phone,
-    profilePictureUrl: user.profilePictureUrl,
-    createdAt: user.createdAt.toISOString(),
-  };
-}
-
 export async function GET(request: NextRequest) {
-  const userId = getUserId(request);
-  if (!userId) return unauthorized();
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
 
-  try {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      return Response.json({ error: "User not found" }, { status: 404 });
-    }
-
-    return Response.json(serializeUser(user));
-  } catch (error) {
-    console.error("get profile error:", error);
-    return Response.json({ error: "Failed to load profile" }, { status: 500 });
-  }
+  const usersCreated =
+    user.role === "ADMIN" ? await countCreatedUsers(user.id) : 0;
+  return Response.json(serializeUser(user, undefined, usersCreated));
 }
 
 export async function PATCH(request: NextRequest) {
-  const userId = getUserId(request);
+  const userId = (await getAuthUser(request))?.id;
   if (!userId) return unauthorized();
 
   try {
@@ -62,7 +39,7 @@ export async function PATCH(request: NextRequest) {
       data.name = name;
     }
 
-    if (body.phone !== undefined) {
+    if (body.phone !== undefined && existing.role === "USER") {
       const normalizedPhone = formatPhone(body.phone);
 
       if (!normalizedPhone || !/^\d{10}$/.test(normalizedPhone)) {
@@ -104,7 +81,9 @@ export async function PATCH(request: NextRequest) {
       data,
     });
 
-    return Response.json(serializeUser(user));
+    const usersCreated =
+      user.role === "ADMIN" ? await countCreatedUsers(user.id) : 0;
+    return Response.json(serializeUser(user, undefined, usersCreated));
   } catch (error) {
     console.error("update profile error:", error);
     return Response.json({ error: "Failed to update profile" }, { status: 500 });

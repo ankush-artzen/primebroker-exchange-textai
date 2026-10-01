@@ -8,24 +8,37 @@ import type {
   User,
   UserProfileData,
 } from "./types";
-import { getStoredUserId } from "./storage";
+import { isStaffRole } from "./roles";
+import {
+  clearStoredUser,
+  getStoredRole,
+  getStoredSessionToken,
+} from "./storage";
 
 async function request<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const userId = getStoredUserId();
+  const sessionToken = getStoredSessionToken();
   const headers: Record<string, string> = {
     ...(options.headers as Record<string, string>),
   };
 
-  if (userId) headers["x-user-id"] = userId;
+  if (sessionToken) headers.Authorization = `Bearer ${sessionToken}`;
   if (options.body && !(options.body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
   }
 
   const res = await fetch(path, { ...options, headers });
   const data = await res.json().catch(() => ({}));
+
+  if (res.status === 401 && sessionToken && !path.startsWith("/api/auth/")) {
+    const staff = isStaffRole(getStoredRole());
+    clearStoredUser();
+    if (typeof window !== "undefined") {
+      window.location.assign(staff ? "/admin/login" : "/onboarding");
+    }
+  }
 
   if (!res.ok) {
     throw new Error(data.error || "Request failed");
@@ -56,8 +69,56 @@ export const api = {
     });
   },
 
+  adminLogin(username: string, password: string) {
+    return request<User>("/api/auth/admin-login", {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+    });
+  },
+
   getProfile() {
     return request<User>("/api/users/me");
+  },
+
+  listUsers() {
+    return request<User[]>("/api/users");
+  },
+
+  createUser(data: {
+    name: string;
+    phone?: string;
+    role?: "USER" | "ADMIN";
+    username?: string;
+    password?: string;
+    userLimit?: number;
+  }) {
+    return request<User>("/api/users", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateUser(
+    id: string,
+    data: {
+      name?: string;
+      phone?: string;
+      username?: string;
+      password?: string;
+      userLimit?: number;
+      disabled?: boolean;
+    },
+  ) {
+    return request<User>(`/api/users/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteUser(id: string) {
+    return request<{ success: boolean }>(`/api/users/${id}`, {
+      method: "DELETE",
+    });
   },
 
   updateProfile(data: Partial<UserProfileData>) {

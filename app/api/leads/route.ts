@@ -1,24 +1,27 @@
 import { NextRequest } from "next/server";
-import { getUserId, unauthorized } from "@/lib/api-auth";
+import { isAdmin, leadScope } from "@/lib/access";
+import { getAuthUser, unauthorized } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
+import { ownerNames, serializeLead } from "@/lib/records";
 import { parseFollowUpMoment } from "@/lib/utils";
 
 export async function GET(request: NextRequest) {
-  const userId = getUserId(request);
-  if (!userId) return unauthorized();
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
 
   try {
     const leads = await prisma.lead.findMany({
-      where: { userId },
+      where: leadScope(user),
       orderBy: { updatedAt: "desc" },
     });
+    const names = isAdmin(user)
+      ? await ownerNames(leads.map((lead) => lead.userId))
+      : null;
 
     return Response.json(
-      leads.map((l) => ({
-        ...l,
-        followUpDate: l.followUpDate?.toISOString() ?? null,
-        createdAt: l.createdAt.toISOString(),
-        updatedAt: l.updatedAt.toISOString(),
+      leads.map((lead) => ({
+        ...serializeLead(lead, false),
+        ...(names ? { ownerName: names.get(lead.userId) ?? null } : {}),
       })),
     );
   } catch (error) {
@@ -28,8 +31,14 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const userId = getUserId(request);
-  if (!userId) return unauthorized();
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
+  if (isAdmin(user)) {
+    return Response.json(
+      { error: "Only brokers can add leads" },
+      { status: 403 },
+    );
+  }
 
   try {
     const body = await request.json();
@@ -54,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     const lead = await prisma.lead.create({
       data: {
-        userId,
+        userId: user.id,
         name: name.trim(),
         phone: phone.trim(),
         requirement: requirement?.trim() || null,

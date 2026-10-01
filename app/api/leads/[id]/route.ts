@@ -1,27 +1,30 @@
 import { NextRequest } from "next/server";
-import { getUserId, unauthorized } from "@/lib/api-auth";
+import { isAdmin, leadOwned } from "@/lib/access";
+import { getAuthUser, unauthorized } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
+import { ownerNames, serializeLead } from "@/lib/records";
 import { parseFollowUpMoment } from "@/lib/utils";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
-  const userId = getUserId(request);
-  if (!userId) return unauthorized();
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
 
   const { id } = await params;
 
   try {
-    const lead = await prisma.lead.findFirst({ where: { id, userId } });
+    const lead = await prisma.lead.findFirst({
+      where: leadOwned(user, id),
+    });
     if (!lead) {
       return Response.json({ error: "Lead not found" }, { status: 404 });
     }
 
+    const names = isAdmin(user) ? await ownerNames([lead.userId]) : null;
     return Response.json({
-      ...lead,
-      followUpDate: lead.followUpDate?.toISOString() ?? null,
-      createdAt: lead.createdAt.toISOString(),
-      updatedAt: lead.updatedAt.toISOString(),
+      ...serializeLead(lead, false),
+      ...(names ? { ownerName: names.get(lead.userId) ?? null } : {}),
     });
   } catch (error) {
     console.error("get lead error:", error);
@@ -30,13 +33,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 }
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
-  const userId = getUserId(request);
-  if (!userId) return unauthorized();
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
 
   const { id } = await params;
 
   try {
-    const existing = await prisma.lead.findFirst({ where: { id, userId } });
+    const existing = await prisma.lead.findFirst({
+      where: leadOwned(user, id),
+    });
     if (!existing) {
       return Response.json({ error: "Lead not found" }, { status: 404 });
     }
@@ -76,13 +81,15 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 }
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
-  const userId = getUserId(request);
-  if (!userId) return unauthorized();
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
 
   const { id } = await params;
 
   try {
-    const existing = await prisma.lead.findFirst({ where: { id, userId } });
+    const existing = await prisma.lead.findFirst({
+      where: leadOwned(user, id),
+    });
     if (!existing) {
       return Response.json({ error: "Lead not found" }, { status: 404 });
     }

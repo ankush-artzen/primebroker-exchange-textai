@@ -4,13 +4,18 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { navTabs } from "@/lib/nav-tabs";
+import { getNavTabs } from "@/lib/nav-tabs";
+import { useAccess } from "@/components/AccessProvider";
+import { isStaffRole } from "@/lib/roles";
 import { QuickAddSheet } from "@/components/QuickAddSheet";
 import { Plus } from "lucide-react";
 
 export function SidebarNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const { canManageUsers, role } = useAccess();
+  const canCreate = !isStaffRole(role);
+  const navTabs = getNavTabs(canManageUsers);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
 
   return (
@@ -44,18 +49,21 @@ export function SidebarNav() {
           })}
         </nav>
 
-        <div className="border-t border-border p-4">
-          <button
-            type="button"
-            onClick={() => setQuickAddOpen(true)}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-sm transition-transform active:scale-[0.98]"
-          >
-            <Plus size={20} strokeWidth={2.5} />
-            Quick add
-          </button>
-        </div>
+        {canCreate && (
+          <div className="border-t border-border p-4">
+            <button
+              type="button"
+              onClick={() => setQuickAddOpen(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-sm transition-transform active:scale-[0.98]"
+            >
+              <Plus size={20} strokeWidth={2.5} />
+              Quick add
+            </button>
+          </div>
+        )}
       </aside>
 
+      {canCreate && (
       <QuickAddSheet
         open={quickAddOpen}
         onClose={() => setQuickAddOpen(false)}
@@ -66,6 +74,7 @@ export function SidebarNav() {
           router.push("/properties/new");
         }}
       />
+      )}
     </>
   );
 }

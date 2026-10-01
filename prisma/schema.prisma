@@ -7,14 +7,35 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  USER
+  ADMIN
+  SUPERADMIN
+}
+
 model User {
   id                String     @id @default(auto()) @map("_id") @db.ObjectId
   name              String
-  phone             String     @unique
+  phone             String?    @unique
+  /// Sparse unique index is created by scripts/create-admin.mjs.
+  username          String?
+  passwordHash      String?
+  role              Role       @default(USER)
+  /// Kept in sync with userLimit > 0. Superadmin sets the number, not this flag.
+  canAddUsers       Boolean?   @default(false)
+  /// How many broker accounts this admin may create. 0 means they cannot add users.
+  userLimit         Int        @default(0)
+  /// Superadmin can stop this account from signing in.
+  disabled          Boolean    @default(false)
+  createdById       String?    @db.ObjectId
+  createdBy         User?      @relation("UserCreatedBy", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdUsers      User[]     @relation("UserCreatedBy")
   profilePictureUrl String?
   createdAt         DateTime   @default(now())
   leads             Lead[]
   properties        Property[]
+
+  @@index([createdById])
 }
 
 model Lead {

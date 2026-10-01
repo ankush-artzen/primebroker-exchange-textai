@@ -1,8 +1,15 @@
-import { CircleUser, Home, LandPlot, Users } from "lucide-react";
+import { CircleUser, Home, LandPlot, Shield, Users } from "lucide-react";
 
-export const navTabs = [
-  { href: "/today", label: "Today", icon: Home },
-  { href: "/leads", label: "Leads", icon: Users },
-  { href: "/properties", label: "Properties", icon: LandPlot },
-  { href: "/account", label: "Account", icon: CircleUser },
-] as const;
+export function getNavTabs(showUsers: boolean, includeCrm = true) {
+  return [
+    ...(includeCrm
+      ? [
+          { href: "/today", label: "Today", icon: Home },
+          { href: "/leads", label: "Leads", icon: Users },
+          { href: "/properties", label: "Properties", icon: LandPlot },
+        ]
+      : []),
+    ...(showUsers ? [{ href: "/users", label: "Users", icon: Shield }] : []),
+    { href: "/account", label: "Account", icon: CircleUser },
+  ];
+}
