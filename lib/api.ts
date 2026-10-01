@@ -36,7 +36,11 @@ async function request<T>(
 
 export const api = {
   sendOtp(phone: string) {
+<<<<<<< HEAD
     return request<{ ok: true }>("/api/auth/send-otp", {
+=======
+    return request<{ ok: true; skipOtp?: boolean }>("/api/auth/send-otp", {
+>>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
       method: "POST",
       body: JSON.stringify({ phone }),
     });
@@ -134,6 +138,19 @@ export const api = {
     });
   },
 
+<<<<<<< HEAD
+=======
+  transcribe(file: File, language: string) {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("language", language);
+    return request<{ transcript: string; languageCode: string | null }>(
+      "/api/ai/transcribe",
+      { method: "POST", body: form },
+    );
+  },
+
+>>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
   uploadPhotos(files: File[]) {
     const form = new FormData();
     files.forEach((f) => form.append("files", f));

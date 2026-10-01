@@ -1,6 +1,10 @@
 "use client";
 
+<<<<<<< HEAD
 import { useEffect, useState } from "react";
+=======
+import { useEffect, useRef, useState } from "react";
+>>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { LeadFormData, ParsedLead, SpeechLanguage } from "@/lib/types";
@@ -9,7 +13,11 @@ import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { formErrorBanner } from "@/lib/form-errors";
 import { LeadForm } from "./LeadForm";
 import { ButtonLoader } from "@/components/Loader";
+<<<<<<< HEAD
 import { Mic, X } from "lucide-react";
+=======
+import { Mic, MicOff, Pencil, RotateCcw, X } from "lucide-react";
+>>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
 import { Modal } from "./Modal";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +25,10 @@ const languages: { code: SpeechLanguage; label: string }[] = [
   { code: "en-IN", label: "English" },
   { code: "hi-IN", label: "हिंदी" },
   { code: "pa-IN", label: "ਪੰਜਾਬੀ" },
+<<<<<<< HEAD
+=======
+  // { code: "hinglish", label: "Hinglish" },
+>>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
 ];
 
 const VOICE_HINT_KEY = "prime-brokers-voice-hint-seen";
@@ -66,9 +78,27 @@ export function VoiceLeadCapture({
   const [error, setError] = useState("");
   const [showVoiceHint, setShowVoiceHint] = useState(false);
   const [parseStatus, setParseStatus] = useState("Tap and describe the lead");
+<<<<<<< HEAD
 
   const { transcript, listening, supported, start, stop, setTranscript } =
     useSpeechRecognition(language);
+=======
+  const [editingSpeech, setEditingSpeech] = useState(false);
+  const speechRef = useRef<HTMLTextAreaElement>(null);
+
+  const {
+    transcript,
+    listening,
+    transcribing,
+    supported,
+    error: speechError,
+    clearError,
+    start,
+    stop,
+    setTranscript,
+  } = useSpeechRecognition(language);
+  const busy = listening || transcribing;
+>>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
 
   useEffect(() => {
     if (active) {
@@ -78,17 +108,38 @@ export function VoiceLeadCapture({
 
   useEffect(() => {
     if (!active) {
+<<<<<<< HEAD
       stop();
+=======
+      void stop({ discard: true });
+>>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
       setShowTypeFallback(false);
       setTypedText("");
       setFormInitial({});
       setFormKey((k) => k + 1);
       setError("");
+<<<<<<< HEAD
+=======
+      setEditingSpeech(false);
+>>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
       setTranscript();
       setParseStatus("Tap and describe the lead");
     }
   }, [active, stop, setTranscript]);
 
+<<<<<<< HEAD
+=======
+  const resizeSpeech = (el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  };
+
+  useEffect(() => {
+    if (editingSpeech) resizeSpeech(speechRef.current);
+  }, [editingSpeech, transcript]);
+
+>>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
   const dismissVoiceHint = () => {
     localStorage.setItem(VOICE_HINT_KEY, "1");
     setShowVoiceHint(false);
@@ -100,14 +151,27 @@ export function VoiceLeadCapture({
   };
 
   const handleParse = async () => {
+<<<<<<< HEAD
     const text = showTypeFallback ? typedText : transcript;
+=======
+    setError("");
+    clearError();
+    let text = showTypeFallback ? typedText : transcript;
+    if (!showTypeFallback && (listening || transcribing)) {
+      const spoken = await stop();
+      text = spoken;
+    }
+>>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
     if (!text.trim()) {
       setError("Please speak or type something first");
       return;
     }
     setParsing(true);
+<<<<<<< HEAD
     setError("");
     stop();
+=======
+>>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
     setParseStatus("Understanding…");
     try {
       const result: ParsedLead = await api.parseLead(text, language);
@@ -131,6 +195,30 @@ export function VoiceLeadCapture({
     }
   };
 
+<<<<<<< HEAD
+=======
+  const turnMicOff = () => {
+    void stop();
+  };
+
+  const turnMicOn = () => {
+    setEditingSpeech(false);
+    setError("");
+    clearError();
+    void start();
+  };
+
+  const resetVoice = () => {
+    setEditingSpeech(false);
+    setError("");
+    setFormInitial({});
+    setFormKey((k) => k + 1);
+    setParseStatus("Listening… speak again");
+    clearError();
+    void start({ fresh: true });
+  };
+
+>>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
   const handleCancel = () => {
     if (onCancel) {
       onCancel();
@@ -192,9 +280,16 @@ export function VoiceLeadCapture({
             <button
               key={l.code}
               type="button"
+<<<<<<< HEAD
               onClick={() => setLanguage(l.code)}
               className={cn(
                 "rounded-full border px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors",
+=======
+              disabled={busy || parsing}
+              onClick={() => setLanguage(l.code)}
+              className={cn(
+                "rounded-full border px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors disabled:opacity-50",
+>>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
                 language === l.code
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-[#e4d3b4] bg-surface text-muted",
@@ -236,10 +331,17 @@ export function VoiceLeadCapture({
           <>
             <button
               type="button"
+<<<<<<< HEAD
               onClick={() => (listening ? stop() : start())}
               disabled={!supported}
               className={cn(
                 "relative mx-auto flex h-20 w-20 items-center justify-center rounded-full text-primary-foreground shadow-lg transition-colors",
+=======
+              onClick={() => (listening ? turnMicOff() : turnMicOn())}
+              disabled={!supported || transcribing || parsing}
+              className={cn(
+                "relative mx-auto flex h-20 w-20 items-center justify-center rounded-full text-primary-foreground shadow-lg transition-colors disabled:opacity-60",
+>>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
                 listening
                   ? "bg-overdue shadow-overdue/35"
                   : "bg-secondary shadow-secondary/35",
@@ -251,6 +353,7 @@ export function VoiceLeadCapture({
               <Mic size={28} strokeWidth={1.75} />
             </button>
             <p className="mt-3.5 text-[13px] font-medium text-primary">
+<<<<<<< HEAD
               {listening ? "Listening… tap to stop" : parseStatus}
             </p>
             <p className="mt-1 min-h-[16px] px-1.5 text-xs italic text-[#8a8578]">
@@ -258,6 +361,104 @@ export function VoiceLeadCapture({
                 (supported ? "" : "Voice not supported in this browser")}
             </p>
             {supported && transcript && (
+=======
+              {transcribing
+                ? "Turning speech into text…"
+                : listening
+                  ? "Listening… tap mic off when you're done"
+                  : transcript
+                    ? "Mic is off"
+                    : parseStatus}
+            </p>
+            {supported && (
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => (listening ? turnMicOff() : turnMicOn())}
+                  disabled={transcribing || parsing}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors",
+                    listening
+                      ? "border-overdue bg-overdue text-white"
+                      : "border-primary bg-primary text-primary-foreground",
+                    (transcribing || parsing) && "opacity-50",
+                  )}
+                >
+                  {listening ? <MicOff size={14} /> : <Mic size={14} />}
+                  {transcribing ? "Working…" : listening ? "Mic off" : "Mic on"}
+                </button>
+                <button
+                  type="button"
+                  onClick={resetVoice}
+                  disabled={parsing || transcribing}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#e4d3b4] bg-surface px-3.5 py-1.5 text-[12.5px] font-semibold text-muted transition-colors disabled:opacity-50"
+                >
+                  <RotateCcw size={14} />
+                  Reset
+                </button>
+              </div>
+            )}
+            {!supported && (
+              <p className="mt-1 px-1.5 text-xs italic text-[#8a8578]">
+                Voice not supported in this browser
+              </p>
+            )}
+            {supported && (busy || transcript || editingSpeech) && (
+              <div className="mt-4 text-left">
+                <div className="mb-1.5 flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-muted">
+                    What you said
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (editingSpeech) {
+                        setEditingSpeech(false);
+                        return;
+                      }
+                      void (async () => {
+                        const text =
+                          listening || transcribing ? await stop() : transcript;
+                        setTranscript(text);
+                        setEditingSpeech(true);
+                      })();
+                    }}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-secondary-dark underline"
+                  >
+                    <Pencil size={12} />
+                    {editingSpeech ? "Done" : "Edit"}
+                  </button>
+                </div>
+                {editingSpeech ? (
+                  <textarea
+                    ref={speechRef}
+                    value={transcript}
+                    onChange={(e) => {
+                      setTranscript(e.target.value);
+                      resizeSpeech(e.currentTarget);
+                    }}
+                    rows={1}
+                    autoFocus
+                    placeholder="Edit the words from your voice note"
+                    className="min-h-[44px] w-full resize-none overflow-hidden rounded-[10px] border border-border bg-surface px-3 py-2.5 text-left text-sm leading-relaxed text-primary outline-none focus:border-primary"
+                  />
+                ) : (
+                  <p className="min-h-[44px] rounded-[10px] border border-border bg-surface px-3 py-2.5 text-left text-sm leading-relaxed text-primary">
+                    {transcript || (
+                      <span className="italic text-[#8a8578]">
+                        {transcribing
+                          ? "Transcribing…"
+                          : listening
+                            ? "Your words will appear when you tap mic off…"
+                            : "Your words will appear here…"}
+                      </span>
+                    )}
+                  </p>
+                )}
+              </div>
+            )}
+            {supported && transcript.trim() && !transcribing && (
+>>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
               <button
                 type="button"
                 disabled={parsing}
@@ -270,7 +471,12 @@ export function VoiceLeadCapture({
             <button
               type="button"
               onClick={() => {
+<<<<<<< HEAD
                 stop();
+=======
+                void stop({ discard: true });
+                setEditingSpeech(false);
+>>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
                 setShowTypeFallback(true);
               }}
               className="mt-3 block w-full text-xs text-secondary-dark underline"
@@ -281,7 +487,13 @@ export function VoiceLeadCapture({
         )}
       </div>
 
+<<<<<<< HEAD
       {error && <p className={formErrorBanner}>{error}</p>}
+=======
+      {(error || speechError) && (
+        <p className={formErrorBanner}>{error || speechError}</p>
+      )}
+>>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
 
       <LeadForm
         key={formKey}

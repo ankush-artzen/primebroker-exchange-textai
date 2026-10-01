@@ -1,6 +1,10 @@
 "use client";
 
+<<<<<<< HEAD
 import { useEffect, useState } from "react";
+=======
+import { useEffect, useRef, useState } from "react";
+>>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
 import type { LeadFormData } from "@/lib/types";
 import {
   cn,
@@ -238,6 +242,7 @@ export function LeadForm({
         variant={variant}
       />
 
+<<<<<<< HEAD
       <div>
         <label className="mb-1.5 block text-xs font-semibold text-muted">
           Notes
@@ -250,6 +255,15 @@ export function LeadForm({
           className="w-full rounded-[10px] border border-border bg-surface px-3 py-2.5 text-sm text-primary outline-none focus:border-primary"
         />
       </div>
+=======
+      <NotesField
+        value={form.notes ?? ""}
+        onChange={(v) => update("notes", v)}
+        minRows={isAdd ? 2 : 3}
+        placeholder={isAdd ? "Anything else worth remembering" : undefined}
+        variant={variant}
+      />
+>>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
 
       <button
         type="submit"
@@ -402,7 +416,10 @@ function FollowUpDateField({
     { label: "Today", days: 0 },
     { label: "Tomorrow", days: 1 },
     { label: "3 days", days: 3 },
+<<<<<<< HEAD
     { label: "1 week", days: 7 },
+=======
+>>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
   ];
 
   const getDateTimeKey = (days: number) => {
@@ -464,6 +481,56 @@ function FollowUpDateField({
   );
 }
 
+<<<<<<< HEAD
+=======
+function NotesField({
+  value,
+  onChange,
+  minRows,
+  placeholder,
+  variant = "default",
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  minRows: number;
+  placeholder?: string;
+  variant?: "default" | "add";
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value]);
+
+  const inputClass =
+    variant === "add"
+      ? "w-full resize-none overflow-hidden rounded-[10px] border border-border bg-surface px-3 py-2.5 text-sm leading-relaxed text-primary outline-none focus:border-primary"
+      : "w-full resize-none overflow-hidden rounded-xl border border-zinc-200 px-3 py-2.5 text-base leading-relaxed outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100";
+
+  const labelClass =
+    variant === "add"
+      ? "mb-1.5 block text-xs font-semibold text-muted"
+      : "mb-1 block text-sm font-medium text-zinc-700";
+
+  return (
+    <div>
+      <label className={labelClass}>Notes</label>
+      <textarea
+        ref={ref}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={minRows}
+        placeholder={placeholder}
+        className={inputClass}
+      />
+    </div>
+  );
+}
+
+>>>>>>> c8c4aded9888b51eace4578f3650195bbc6f3ab6
 function Field({
   label,
   value,
