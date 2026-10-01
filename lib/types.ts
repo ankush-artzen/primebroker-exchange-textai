@@ -8,6 +8,12 @@ export interface User {
 
 export type UserProfileData = Pick<User, "name" | "phone" | "profilePictureUrl">;
 
+export interface OtpVerifyResult {
+  verified: true;
+  token: string;
+  user: User | null;
+}
+
 export interface Lead {
   id: string;
   userId: string;

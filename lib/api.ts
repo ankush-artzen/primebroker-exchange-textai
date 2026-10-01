@@ -4,6 +4,7 @@ import type {
   ParsedLead,
   Property,
   PropertyFormData,
+  OtpVerifyResult,
   User,
   UserProfileData,
 } from "./types";
@@ -34,10 +35,24 @@ async function request<T>(
 }
 
 export const api = {
-  identify(name: string, phone: string) {
+  sendOtp(phone: string) {
+    return request<{ ok: true }>("/api/auth/send-otp", {
+      method: "POST",
+      body: JSON.stringify({ phone }),
+    });
+  },
+
+  verifyOtp(phone: string, code: string) {
+    return request<OtpVerifyResult>("/api/auth/verify-otp", {
+      method: "POST",
+      body: JSON.stringify({ phone, code }),
+    });
+  },
+
+  identify(name: string, phone: string, verificationToken: string) {
     return request<User>("/api/users/identify", {
       method: "POST",
-      body: JSON.stringify({ name, phone }),
+      body: JSON.stringify({ name, phone, verificationToken }),
     });
   },
 

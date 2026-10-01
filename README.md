@@ -28,6 +28,9 @@ cp .env.example .env
 | `ANTHROPIC_API_KEY` | Alternate AI provider for voice lead extraction |
 | `AI_PROVIDER` | Optional: `openai` or `anthropic` to force a provider |
 | `CLOUDINARY_*` | For property photo uploads |
+| `TWILIO_ACCOUNT_SID` | Twilio Account SID from the [console](https://console.twilio.com/) |
+| `TWILIO_AUTH_TOKEN` | Twilio Auth Token from the console |
+| `TWILIO_VERIFY_SERVICE_SID` | Verify Service SID (`VA…`). Create under **Verify → Services**. No phone number purchase needed. |
 
 3. Push schema to MongoDB:
 
@@ -37,7 +40,13 @@ npm run db:push
 
 4. Add PWA icons to `public/icons/` (`icon-192.png`, `icon-512.png`).
 
-5. Start dev server:
+5. Twilio OTP (no phone number purchase):
+   - Open [Twilio Console](https://console.twilio.com/) → copy **Account SID** and **Auth Token**
+   - Go to **Verify → Services → Create new** (name it `Prime Brokers`)
+   - Copy the Service SID (`VA…`) into `TWILIO_VERIFY_SERVICE_SID`
+   - Trial accounts can only SMS numbers listed under **Phone Numbers → Manage → Verified Caller IDs**
+
+6. Start dev server:
 
 ```bash
 npm run dev
@@ -47,7 +56,9 @@ npm run dev
 
 | Method | Route | Description |
 |--------|-------|-------------|
-| POST | `/api/users/identify` | Broker login (name + phone) |
+| POST | `/api/auth/send-otp` | Send SMS OTP via Twilio Verify |
+| POST | `/api/auth/verify-otp` | Check OTP; returning brokers are logged in |
+| POST | `/api/users/identify` | Create broker after OTP (new accounts) |
 | GET | `/api/leads` | List all leads |
 | POST | `/api/leads` | Create lead |
 | PATCH | `/api/leads/:id` | Update lead |
@@ -64,7 +75,7 @@ Auth: pass `x-user-id` header (stored in browser localStorage after onboarding).
 
 ## Features
 
-- **Broker identity** — name + phone, no password
+- **Broker identity** — phone OTP via Twilio Verify, then name for new accounts
 - **Leads** — CRUD, follow-up dates, call/WhatsApp, reschedule
 - **Voice capture** — English/Hindi/Punjabi speech → OpenAI or Claude Haiku → pre-filled form
 - **Properties** — CRUD with Cloudinary photo uploads

@@ -13,6 +13,11 @@ export function isValidIndianPhone(phone: string): boolean {
   return normalizeIndianPhone(phone).length === 10;
 }
 
+/** E.164 for Indian mobiles — Twilio Verify does not need a purchased number. */
+export function toE164India(phone: string): string {
+  return `+91${normalizeIndianPhone(phone)}`;
+}
+
 export function sanitizePersonName(name: string): string {
   return name.replace(/[^\p{L}\s]/gu, "");
 }
