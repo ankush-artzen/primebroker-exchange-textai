@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import type { Property } from "@/lib/types";
+import { LISTING_INTENTS, propertyTypeLabel } from "@/lib/constants/property";
+import { formatAreaDetail, listingDetailRows } from "@/lib/property-listing";
 import { getPropertyStatus, PROPERTY_STATUS_LABELS } from "@/lib/utils";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Modal } from "./Modal";
@@ -83,10 +85,25 @@ export function PropertyDetailSheet({
         />
 
         <InfoRow label="Broker" value={property.ownerName} />
+        <InfoRow
+          label="Looking to"
+          value={LISTING_INTENTS.find((option) => option.id === property.intent)?.label}
+        />
+        <InfoRow
+          label="Property type"
+          value={propertyTypeLabel(property.category, property.propertyType)}
+        />
         <InfoRow label="Location" value={property.location} />
         <InfoRow label="Price" value={property.price} />
         <InfoRow label="Configuration" value={property.configuration} />
-        <InfoRow label="Area" value={property.area} />
+        {!property.carpetArea && !property.plotArea && !property.builtUpArea && (
+          <InfoRow label="Area" value={formatAreaDetail(property.area, property.areaType)} />
+        )}
+        {listingDetailRows(property)
+          .filter((row) => row.label !== "Looking to" && row.label !== "Property type")
+          .map((row) => (
+            <InfoRow key={row.label} label={row.label} value={row.value} />
+          ))}
         <InfoRow
           label="Availability"
           value={

@@ -71,6 +71,8 @@ model Property {
   availability  String?
   notes         String?
   photoUrls     String[]
+  /// Sell/rent posting details: type, rooms, possession, ownership, amenities.
+  listing       Json?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

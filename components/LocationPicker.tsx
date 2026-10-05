@@ -31,9 +31,15 @@ interface Props {
   value: string;
   onChange: (value: string) => void;
   error?: string;
+  label?: string;
 }
 
-export function LocationPicker({ value, onChange, error }: Props) {
+export function LocationPicker({
+  value,
+  onChange,
+  error,
+  label = "Location *",
+}: Props) {
   const [mode, setMode] = useState<LocationMode>("map");
   const [lat, setLat] = useState<number | null>(null);
   const [lon, setLon] = useState<number | null>(null);
@@ -99,18 +105,21 @@ export function LocationPicker({ value, onChange, error }: Props) {
   };
 
   useEffect(() => {
-    if (mode !== "map" || !query.trim() || query.length < 2 || skipSearchRef.current) {
+    const trimmed = query.trim();
+    if (mode !== "map" || trimmed.length < 3 || skipSearchRef.current) {
       if (skipSearchRef.current) skipSearchRef.current = false;
       return;
     }
 
-    const timer = setTimeout(async () => {
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
       setSearching(true);
       try {
         const res = await fetch(
-          `/api/geocode/search?q=${encodeURIComponent(query)}`,
+          `/api/geocode/search?q=${encodeURIComponent(trimmed)}`,
+          { signal: controller.signal },
         );
-        if (!res.ok) return;
+        if (!res.ok || controller.signal.aborted) return;
         const data = (await res.json()) as { results: SearchResult[] };
         const first = data.results[0] ?? null;
         setPreview(first);
@@ -118,12 +127,17 @@ export function LocationPicker({ value, onChange, error }: Props) {
           setLat(first.lat);
           setLon(first.lon);
         }
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
       } finally {
-        setSearching(false);
+        if (!controller.signal.aborted) setSearching(false);
       }
-    }, 350);
+    }, 600);
 
-    return () => clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
   }, [query, mode]);
 
   const useMyLocation = () => {
@@ -161,7 +175,7 @@ export function LocationPicker({ value, onChange, error }: Props) {
     <div className="space-y-3" data-field-error={error ? "true" : undefined}>
       <div className="flex items-center justify-between gap-2">
         <label className="block text-sm font-medium text-zinc-700">
-          Location *
+          {label}
         </label>
         {resolving && mode === "map" && (
           <span className="flex items-center gap-1 text-[11px] text-muted">
@@ -240,6 +254,7 @@ export function LocationPicker({ value, onChange, error }: Props) {
             )}
           </div>
 
+
           <LocationPickerMap lat={lat} lon={lon} onPick={handlePick} />
 
           {preview && !value && (
@@ -285,6 +300,7 @@ export function LocationPicker({ value, onChange, error }: Props) {
             className={cn(
               "w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-base outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100",
               error && fieldErrorBorder,
+              
             )}
           />
           <button

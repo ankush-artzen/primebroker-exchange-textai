@@ -38,3 +38,63 @@ export function parsePrice(value: string): { amount: string; unit: PriceUnit } {
 
   return { amount: "", unit: "lakh" };
 }
+
+const BELOW_TWENTY = [
+  "",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+  "ten",
+  "eleven",
+  "twelve",
+  "thirteen",
+  "fourteen",
+  "fifteen",
+  "sixteen",
+  "seventeen",
+  "eighteen",
+  "nineteen",
+];
+
+const TENS = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+
+function twoDigits(n: number) {
+  if (n < 20) return BELOW_TWENTY[n];
+  const ten = Math.floor(n / 10);
+  const one = n % 10;
+  return one ? `${TENS[ten]} ${BELOW_TWENTY[one]}` : TENS[ten];
+}
+
+function threeDigits(n: number) {
+  const hundred = Math.floor(n / 100);
+  const rest = n % 100;
+  return [hundred ? `${BELOW_TWENTY[hundred]} hundred` : "", rest ? twoDigits(rest) : ""]
+    .filter(Boolean)
+    .join(" ");
+}
+
+export function amountInWords(value: string) {
+  const digits = value.replace(/[^\d]/g, "");
+  if (!digits) return "";
+  const n = Number(digits);
+  if (!Number.isFinite(n) || n <= 0) return "";
+  const crore = Math.floor(n / 10000000);
+  const lakh = Math.floor((n % 10000000) / 100000);
+  const thousand = Math.floor((n % 100000) / 1000);
+  const rest = n % 1000;
+  const words = [
+    crore ? `${twoDigits(crore)} crore` : "",
+    lakh ? `${twoDigits(lakh)} lakh` : "",
+    thousand ? `${twoDigits(thousand)} thousand` : "",
+    rest ? threeDigits(rest) : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  return `${words.charAt(0).toUpperCase()}${words.slice(1)} rupees`;
+}

@@ -27,22 +27,31 @@ export async function GET(request: NextRequest) {
     address?: {
       suburb?: string;
       neighbourhood?: string;
+      city_district?: string;
+      quarter?: string;
       city?: string;
       town?: string;
       village?: string;
+      municipality?: string;
       state?: string;
     };
   };
 
   const addr = data.address;
-  const short = addr
-    ? [addr.suburb ?? addr.neighbourhood, addr.city ?? addr.town ?? addr.village, addr.state]
-        .filter(Boolean)
-        .join(", ")
-    : "";
+  const city = addr?.city || addr?.town || addr?.village || addr?.municipality || "";
+  const locality =
+    addr?.suburb || addr?.neighbourhood || addr?.city_district || addr?.quarter || "";
+  const subLocality =
+    addr?.suburb && addr.neighbourhood && addr.suburb !== addr.neighbourhood
+      ? addr.neighbourhood
+      : "";
+  const short = [locality, city, addr?.state].filter(Boolean).join(", ");
 
   return NextResponse.json({
     label: short || data.display_name || "",
     full: data.display_name || "",
+    city,
+    locality,
+    subLocality,
   });
 }

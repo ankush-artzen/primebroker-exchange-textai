@@ -7,6 +7,43 @@ export type AreaUnit = PropertyAreaUnit;
 
 export { PROPERTY_AREA_UNITS as areaUnits };
 
+/** Square feet in one unit. Punjab/Chandigarh: 1 gaj = 9 sq.ft, 1 marla = 272.25 sq.ft, 1 kanal = 20 marla. */
+const SQFT_PER_UNIT: Record<AreaUnit, number> = {
+  "sq-ft": 1,
+  "sq-yd": 9,
+  "sq-m": 10.76391041671,
+  acre: 43560,
+  gaj: 9,
+  marla: 272.25,
+  kanal: 5445,
+};
+
+export function toSqft(amount: string, unit: AreaUnit): number | null {
+  const trimmed = amount.trim();
+  if (!trimmed) return null;
+  const value = Number(trimmed);
+  if (!Number.isFinite(value)) return null;
+  return value * SQFT_PER_UNIT[unit];
+}
+
+export function fromSqft(sqft: number, unit: AreaUnit): string {
+  if (!Number.isFinite(sqft)) return "";
+  return formatAmount(sqft / SQFT_PER_UNIT[unit]);
+}
+
+export function convertAreaAmount(amount: string, from: AreaUnit, to: AreaUnit): string {
+  if (!amount.trim() || from === to) return amount;
+  const sqft = toSqft(amount, from);
+  if (sqft == null) return amount;
+  return fromSqft(sqft, to);
+}
+
+function formatAmount(value: number): string {
+  const rounded = Math.round(value * 10000) / 10000;
+  if (Math.abs(rounded - Math.round(rounded)) < 1e-9) return String(Math.round(rounded));
+  return rounded.toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
+}
+
 export function formatArea(amount: string, unit: AreaUnit): string {
   const trimmed = amount.trim();
   if (!trimmed) return "";

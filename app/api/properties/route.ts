@@ -1,7 +1,13 @@
 import { NextRequest } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { isAdmin, propertyScope } from "@/lib/access";
 import { getAuthUser, unauthorized } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
+import {
+  listingFromBody,
+  optionalText,
+  photoUrlsFrom,
+} from "@/lib/property-listing";
 import { ownerNames, serializeProperty } from "@/lib/records";
 
 export async function GET(request: NextRequest) {
@@ -45,19 +51,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = await request.json();
-    const {
-      title,
-      location,
-      price,
-      configuration,
-      area,
-      availability,
-      notes,
-      photoUrls,
-    } = body;
+    const body = (await request.json()) as Record<string, unknown>;
+    const title = optionalText(body.title);
+    const location = optionalText(body.location);
+    const price = optionalText(body.price);
 
-    if (!title?.trim() || !location?.trim() || !price?.trim()) {
+    if (!title || !location || !price) {
       return Response.json(
         { error: "Title, location, and price are required" },
         { status: 400 },
@@ -67,22 +66,19 @@ export async function POST(request: NextRequest) {
     const property = await prisma.property.create({
       data: {
         userId: user.id,
-        title: title.trim(),
-        location: location.trim(),
-        price: price.trim(),
-        configuration: configuration?.trim() || null,
-        area: area?.trim() || null,
-        availability: availability?.trim() || null,
-        notes: notes?.trim() || null,
-        photoUrls: Array.isArray(photoUrls) ? photoUrls : [],
+        title,
+        location,
+        price,
+        configuration: optionalText(body.configuration),
+        area: optionalText(body.area),
+        availability: optionalText(body.availability),
+        notes: optionalText(body.notes),
+        photoUrls: photoUrlsFrom(body.photoUrls),
+        listing: listingFromBody(body) as Prisma.InputJsonObject,
       },
     });
 
-    return Response.json({
-      ...property,
-      createdAt: property.createdAt.toISOString(),
-      updatedAt: property.updatedAt.toISOString(),
-    });
+    return Response.json(serializeProperty(property, false));
   } catch (error) {
     console.error("create property error:", error);
     return Response.json(

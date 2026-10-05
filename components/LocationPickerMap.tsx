@@ -64,7 +64,12 @@ export function LocationPickerMap({ lat, lon, onPick }: Props) {
 
     const initial = coordsRef.current;
 
-    const map = L.map(containerRef.current, {
+    const container = containerRef.current;
+    if ("_leaflet_id" in container) {
+      delete (container as HTMLElement & { _leaflet_id?: number })._leaflet_id;
+    }
+
+    const map = L.map(container, {
       center:
         initial.lat != null && initial.lon != null
           ? [initial.lat, initial.lon]

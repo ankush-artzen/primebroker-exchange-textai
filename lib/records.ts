@@ -35,11 +35,17 @@ export function serializeProperty<
   T extends Owned & {
     createdAt: Date;
     updatedAt: Date;
+    listing?: unknown;
   },
 >(property: T, includeOwner: boolean) {
-  const { user, ...rest } = property;
+  const { user, listing, ...rest } = property;
+  const details =
+    listing && typeof listing === "object" && !Array.isArray(listing)
+      ? listing
+      : {};
   return {
     ...rest,
+    ...details,
     ...(includeOwner && user ? { ownerName: user.name } : {}),
     createdAt: property.createdAt.toISOString(),
     updatedAt: property.updatedAt.toISOString(),
