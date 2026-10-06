@@ -71,18 +71,107 @@ export const RESIDENTIAL_PROPERTY_TYPES = [
   { id: "builder-floor", label: "Builder Floor" },
   { id: "plot", label: "Plot/Land" },
   { id: "studio", label: "1RK/Studio" },
+  { id: "farmserviced-apartment", label: "Serviced Apartment" },
   { id: "farmhouse", label: "Farmhouse" },
+ 
   { id: "other", label: "Other" },
 ] as const;
 
 export const COMMERCIAL_PROPERTY_TYPES = [
-  { id: "office", label: "Office Space" },
-  { id: "shop", label: "Shop / Showroom" },
-  { id: "commercial-land", label: "Commercial Land" },
-  { id: "warehouse", label: "Warehouse / Godown" },
-  { id: "industrial-building", label: "Industrial Building" },
-  { id: "industrial-shed", label: "Industrial Shed" },
-  { id: "agricultural", label: "Agricultural Land" },
+  { id: "office", label: "Office" },
+  { id: "retail", label: "Retail" },
+  { id: "plot-land", label: "Plot / Land" },
+  { id: "storage", label: "Storage" },
+  { id: "industry", label: "Industry" },
+  { id: "hospitality", label: "Hospitality" },
+  { id: "other", label: "Other" },
+] as const;
+
+export const OFFICE_TYPES = [
+  { id: "ready-to-move", label: "Ready to move office space" },
+  { id: "bare-shell", label: "Bare shell office space" },
+  { id: "co-working", label: "Co-working office space" },
+] as const;
+
+export const PLOT_TYPES = [
+  { id: "commercial-land", label: "Commercial Land/Inst. Land" },
+  { id: "Agricultural-land", label: "Agricultural/Farm Land" },
+  { id: "Industrial-Land", label: "Industrial Lands/Plots" },
+
+
+] as const;
+
+export const RETAIL_TYPES = [
+  { id:  "Commercial Shops", label: "Commercial Shops" },
+  { id: "Commercial Showrooms", label: "Commercial Showrooms" },
+
+] as const;
+
+export const SHOP_LOCATIONS = [
+  { id: "mall", label: "Mall" },
+  { id: "commercial-project", label: "Commercial Project" },
+  { id: "residential-project", label: "Residential Project" },
+  { id: "retail-complex", label: "Retail Complex/Building" },
+  { id: "market", label: "Market / High Street" },
+  { id: "others", label: "Others" },
+] as const;
+
+export const SHOP_WASHROOM_OPTIONS = [
+  { id: "private", label: "Private washrooms" },
+  { id: "public", label: "Public washrooms" },
+  { id: "not-available", label: "Not Available" },
+] as const;
+
+export const PARKING_TYPE_OPTIONS = [
+  { id: "private", label: "Private Parking" },
+  { id: "public", label: "Public Parking" },
+  { id: "multilevel", label: "Multilevel Parking" },
+  { id: "not-available", label: "Not Available" },
+] as const;
+
+export const STORAGE_TYPES =  [
+  { id: "warehouse", label: "Warehouse" },
+  { id: "Cold-Storage", label: "Cold Storage" },
+
+] as const;
+
+export const INDUSTRY_TYPES = [
+  { id: "Factory", label: "Factory" },
+  { id: "Manufacturing", label: "Manufacturing" },
+
+] as const;
+
+export const HOSPITALITY_TYPES = [
+  { id: "Hotel", label: "Hotel/Resorts" },
+  { id: "Resort", label: "ReGuest-House/Banquet-Hallssort" },
+
+] as const;
+
+export const PRESENCE_OPTIONS = [
+  { id: "available", label: "Available" },
+  { id: "not-available", label: "Not Available" },
+] as const;
+
+export const PANTRY_TYPES = [
+  { id: "private", label: "Private" },
+  { id: "shared", label: "Shared" },
+  { id: "not-available", label: "Not Available" },
+] as const;
+
+const LEGACY_COMMERCIAL_TYPE_LABELS: Record<string, string> = {
+  shop: "Shop / Showroom",
+  "commercial-land": "Commercial Land",
+  warehouse: "Warehouse / Godown",
+  "industrial-building": "Industrial Building",
+  "industrial-shed": "Industrial Shed",
+  agricultural: "Agricultural Land",
+};
+
+export const APARTMENT_BHK_OPTIONS = [
+  { id: "3 BHK", label: "3 BHK" },
+  { id: "4 BHK", label: "4 BHK" },
+  { id: "5 BHK", label: "5 BHK" },
+  { id: "6 BHK", label: "6 BHK" },
   { id: "other", label: "Other" },
 ] as const;
 
@@ -118,12 +207,58 @@ export const ADDITIONAL_ROOM_OPTIONS = [
 export const FURNISHING_OPTIONS = [
   { id: "furnished", label: "Furnished" },
   { id: "semi", label: "Semi-furnished" },
-  { id: "unfurnished", label: "Unfurnished" },
+  { id: "unfurnished", label: "Un-furnished" },
 ] as const;
 
 export const POSSESSION_OPTIONS = [
   { id: "ready", label: "Ready to move" },
   { id: "under-construction", label: "Under construction" },
+] as const;
+
+export const BUILDER_FLOOR_TYPES = [
+  { id: "Single Floor", label: "Single Floor" },
+  { id: "Duplex", label: "Duplex" },
+  { id: "Triplex", label: "Triplex" },
+] as const;
+
+export const BUILDER_FLOOR_AGE_OPTIONS = [
+  { id: "0-1", label: "0–1 years" },
+  { id: "1-5", label: "1–5 years" },
+  { id: "5-10", label: "5–10 years" },
+  { id: "10-15", label: "10–15 years" },
+  { id: "15+", label: "15+ years" },
+] as const;
+
+export const POSSESSION_BY_OPTIONS = [
+  { id: "3-months", label: "Within 3 Months" },
+  { id: "6-months", label: "Within 6 Months" },
+  { id: "2027", label: "By 2027" },
+  { id: "2028", label: "By 2028" },
+  { id: "2029", label: "By 2029" },
+  { id: "2030", label: "By 2030" },
+] as const;
+
+export const BUILDER_FLOOR_BALCONY_OPTIONS = [
+  { id: "1", label: "1" },
+  { id: "2", label: "2" },
+  { id: "3", label: "3" },
+  { id: "3+", label: "More than 3" },
+] as const;
+
+export const PLOT_POSSESSION_OPTIONS = [
+  { id: "immediate", label: "Immediate" },
+  { id: "3-months", label: "Within 3 Months" },
+  { id: "6-months", label: "Within 6 Months" },
+  { id: "2027", label: "By 2027" },
+  { id: "2028", label: "By 2028" },
+  { id: "2029", label: "By 2029" },
+] as const;
+
+export const PLOT_CONSTRUCTION_OPTIONS = [
+  { id: "shed", label: "Shed" },
+  { id: "rooms", label: "Room(s)" },
+  { id: "washroom", label: "Washroom" },
+  { id: "other", label: "Other" },
 ] as const;
 
 export const PROPERTY_AGE_OPTIONS = [
@@ -254,6 +389,12 @@ export const OPEN_SIDE_OPTIONS = [
   { id: "4", label: "4" },
 ] as const;
 
+export const COMMERCIAL_LAND_OPEN_SIDES = [
+  { id: "1", label: "1" },
+  { id: "2", label: "2" },
+  { id: "3+", label: "3+" },
+] as const;
+
 export const RESIDENTIAL_AMENITIES = [
   { id: "lift", label: "Lift" },
   { id: "security", label: "Security Guard" },
@@ -279,7 +420,7 @@ export const COMMERCIAL_AMENITIES = [
   { id: "visitor-parking", label: "Visitor parking" },
 ] as const;
 
-const LAND_TYPES = new Set(["plot", "commercial-land", "agricultural"]);
+const LAND_TYPES = new Set(["plot", "plot-land", "commercial-land", "agricultural"]);
 const FLOOR_NUMBER_TYPES = new Set([
   "flat",
   "builder-floor",
@@ -287,6 +428,8 @@ const FLOOR_NUMBER_TYPES = new Set([
   "serviced",
   "office",
   "shop",
+  "retail",
+  "hospitality",
 ]);
 
 export function optionLabel(
@@ -311,6 +454,7 @@ export function propertyTypeLabel(
     [...RESIDENTIAL_PROPERTY_TYPES, ...COMMERCIAL_PROPERTY_TYPES].find(
       (option) => option.id === propertyType,
     )?.label ??
+    LEGACY_COMMERCIAL_TYPE_LABELS[propertyType] ??
     propertyType
   );
 }
@@ -330,6 +474,7 @@ export function getPropertyTypeOptions(
   }
   return options;
 }
+
 
 export function amenityOptions(category?: string | null) {
   return category === "commercial" ? COMMERCIAL_AMENITIES : RESIDENTIAL_AMENITIES;
@@ -356,4 +501,47 @@ export function showsBedrooms(propertyType?: string | null) {
 
 export function showsPropertyFloor(propertyType?: string | null) {
   return !!propertyType && FLOOR_NUMBER_TYPES.has(propertyType);
+}
+
+export const NAMED_PROPERTY_FLOORS = [
+  { id: "basement", label: "Basement" },
+  { id: "lower-ground", label: "Lower Ground" },
+  { id: "ground", label: "Ground" },
+] as const;
+
+const DEFAULT_FLOOR_COUNT = 40;
+const MAX_FLOOR_COUNT = 100;
+
+export function propertyFloorOptions(totalFloors?: string | null, current?: string | null) {
+  const parsed = Number.parseInt((totalFloors ?? "").trim(), 10);
+  let count = Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_FLOOR_COUNT;
+  count = Math.min(Math.max(count, 1), MAX_FLOOR_COUNT);
+  const currentNumber = Number.parseInt((current ?? "").trim(), 10);
+  if (Number.isFinite(currentNumber) && currentNumber > count && currentNumber <= MAX_FLOOR_COUNT) {
+    count = currentNumber;
+  }
+
+  const options: { id: string; label: string }[] = [
+    ...NAMED_PROPERTY_FLOORS,
+    ...Array.from({ length: count }, (_, index) => {
+      const floor = String(index + 1);
+      return { id: floor, label: floor };
+    }),
+  ];
+  const trimmed = current?.trim() ?? "";
+  if (trimmed && !options.some((option) => option.id === trimmed)) {
+    options.unshift({ id: trimmed, label: propertyFloorLabel(trimmed) });
+  }
+  return options;
+}
+
+export function propertyFloorLabel(value?: string | null) {
+  const trimmed = value?.trim() ?? "";
+  if (!trimmed) return "";
+  const named = NAMED_PROPERTY_FLOORS.find((option) => option.id === trimmed);
+  return named?.label ?? trimmed;
+}
+
+export function isNamedPropertyFloor(value?: string | null) {
+  return NAMED_PROPERTY_FLOORS.some((option) => option.id === value?.trim());
 }

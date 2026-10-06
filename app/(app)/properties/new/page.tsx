@@ -1,7 +1,7 @@
 "use client";
 
+import { useRef } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import type { PropertyFormData } from "@/lib/types";
 import { api } from "@/lib/api";
 import { PropertyForm } from "@/components/PropertyForm";
@@ -10,6 +10,12 @@ import { ArrowLeft } from "lucide-react";
 
 export default function NewPropertyPage() {
   const router = useRouter();
+  const wizardBackRef = useRef<(() => boolean) | null>(null);
+
+  const handleBack = () => {
+    if (wizardBackRef.current?.()) return;
+    router.push("/properties");
+  };
 
   const handleCreate = async (data: PropertyFormData) => {
     await api.createProperty(data);
@@ -20,13 +26,14 @@ export default function NewPropertyPage() {
     <AppPage
       header={
         <header className="mb-4 flex items-center gap-3">
-          <Link
-            href="/properties"
-            aria-label="Back to properties"
+          <button
+            type="button"
+            onClick={handleBack}
+            aria-label="Back"
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-muted transition-colors hover:text-primary"
           >
             <ArrowLeft size={18} />
-          </Link>
+          </button>
           <h1 className="font-serif text-[23px] font-medium text-primary">
             Add Property
           </h1>
@@ -34,6 +41,7 @@ export default function NewPropertyPage() {
       }
     >
       <PropertyForm
+        wizardBackRef={wizardBackRef}
         onSubmit={handleCreate}
         onCancel={() => router.push("/properties")}
       />

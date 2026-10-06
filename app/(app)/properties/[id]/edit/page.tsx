@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
 import type { Property, PropertyFormData } from "@/lib/types";
 import { api } from "@/lib/api";
 import { PropertyForm } from "@/components/PropertyForm";
@@ -16,6 +15,12 @@ export default function EditPropertyPage() {
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const wizardBackRef = useRef<(() => boolean) | null>(null);
+
+  const handleBack = () => {
+    if (wizardBackRef.current?.()) return;
+    router.push("/properties");
+  };
 
   useEffect(() => {
     if (!params.id) return;
@@ -40,13 +45,14 @@ export default function EditPropertyPage() {
     <AppPage
       header={
         <header className="mb-4 flex items-center gap-3">
-          <Link
-            href="/properties"
-            aria-label="Back to properties"
+          <button
+            type="button"
+            onClick={handleBack}
+            aria-label="Back"
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-muted transition-colors hover:text-primary"
           >
             <ArrowLeft size={18} />
-          </Link>
+          </button>
           <h1 className="font-serif text-[23px] font-medium text-primary">
             Edit Property
           </h1>
@@ -60,6 +66,7 @@ export default function EditPropertyPage() {
       ) : property ? (
         <PropertyForm
           initial={property}
+          wizardBackRef={wizardBackRef}
           submitLabel="Save changes"
           onSubmit={handleUpdate}
           onCancel={() => router.push("/properties")}

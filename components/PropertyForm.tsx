@@ -5,61 +5,53 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import type { PropertyFormData } from "@/lib/types";
 import { PriceField } from "@/components/PriceField";
-import { formatArea, fromSqft, parseArea, toSqft, type AreaUnit } from "@/lib/area";
-import { amountInWords } from "@/lib/price";
 import {
-  ADDITIONAL_ROOM_OPTIONS,
-  FORM_AREA_UNITS,
-  type FormAreaUnit,
-  BALCONY_OPTIONS,
-  BATHROOM_OPTIONS,
-  BEDROOM_OPTIONS,
-  FACING_OPTIONS,
-  FLOORING_OPTIONS,
-  FURNISHING_OPTIONS,
-  LISTING_INTENTS,
-  OPEN_SIDE_OPTIONS,
+  BUILDER_FLOOR_TYPES,
   OWNERSHIP_OPTIONS,
-  POSSESSION_OPTIONS,
   POSTED_AS_OPTIONS,
-  POWER_BACKUP_OPTIONS,
-  PROPERTY_AGE_OPTIONS,
-  RENT_AGE_OPTIONS,
-  RENT_BALCONY_OPTIONS,
-  RENT_FURNISHING_OPTIONS,
-  RENT_TENANT_OPTIONS,
   PROPERTY_AVAILABILITY_OPTIONS,
   PROPERTY_CATEGORIES,
-  RESIDENTIAL_LISTING_TYPES,
-  RESIDENTIAL_PROPERTY_TYPES,
   TENANT_OPTIONS,
-  WATER_SOURCE_OPTIONS,
-  YES_NO_OPTIONS,
   amenityOptions,
-  getConfigurationOptions,
-  getPropertyTypeOptions,
   isLandType,
-  propertyTypeLabel,
-  showsBedrooms,
   showsPropertyFloor,
-  showsRoomDetails,
 } from "@/lib/constants/property";
-import {
-  configurationFromListing,
-  suggestTitle,
-} from "@/lib/property-listing";
-import {
-  fieldErrorBorder,
-  fieldErrorText,
-  formatMissingFieldsSummary,
-  scrollToFirstFieldError,
-  formErrorBanner,
-} from "@/lib/form-errors";
+import { configurationFromListing, suggestTitle } from "@/lib/property-listing";
+import { formatMissingFieldsSummary, scrollToFirstFieldError } from "@/lib/form-errors";
 import { cn } from "@/lib/utils";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ButtonLoader, Spinner } from "@/components/Loader";
 import { PlaceSearch, type PlaceHit } from "@/components/PlaceSearch";
-import { ChevronDown, Minus, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { api } from "@/lib/api";
+import { CommercialDetails } from "@/components/property-form/commercial/CommercialDetails";
+import { CommercialLandProfile } from "@/components/property-form/commercial/CommercialLandProfile";
+import { CommercialProfile } from "@/components/property-form/commercial/CommercialProfile";
+import { RetailShopMallProfile } from "@/components/property-form/commercial/RetailShopMallProfile";
+import { BareShellOfficeProfile } from "@/components/property-form/commercial/BareShellOfficeProfile";
+import { CoWorkingOfficeProfile } from "@/components/property-form/commercial/CoWorkingOfficeProfile";
+import { OfficeProfile } from "@/components/property-form/commercial/OfficeProfile";
+import {
+  CheckField,
+  Choices,
+  Field,
+  MultiChoices,
+  SelectField,
+  fieldClass,
+} from "@/components/property-form/fields";
+import {
+  areaSummary,
+  legacyAreas,
+  rentAmountError,
+  salePriceError,
+} from "@/components/property-form/helpers";
+import { FormMessage } from "@/components/property-form/messages";
+import { ResidentialBuilderFloorProfile } from "@/components/property-form/residential/ResidentialBuilderFloorProfile";
+import { ResidentialDetails } from "@/components/property-form/residential/ResidentialDetails";
+import { ResidentialPlotProfile } from "@/components/property-form/residential/ResidentialPlotProfile";
+import { ResidentialProfile } from "@/components/property-form/residential/ResidentialProfile";
+import { RentProfile } from "@/components/property-form/residential/RentProfile";
+import type { ListingDraft } from "@/components/property-form/types";
 
 const LocationPickerMap = dynamic(
   () => import("./LocationPickerMap").then((m) => m.LocationPickerMap),
@@ -72,9 +64,6 @@ const LocationPickerMap = dynamic(
     ),
   },
 );
-
-const fieldClass =
-  "w-full rounded-xl border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted/80 focus:border-primary focus:ring-2 focus:ring-primary/25";
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -107,68 +96,18 @@ type StepField =
   | "intent"
   | "category"
   | "propertyType"
+  | "officeType"
+  | "retailType"
+  | "shopLocation"
+  | "plotType"
+  | "storageType"
   | "city"
   | "locality"
   | "location"
   | "title"
   | "price"
+  | "currentRent"
   | "area";
-
-type ListingDraft = {
-  title: string;
-  location: string;
-  price: string;
-  configuration: string;
-  area: string;
-  availability: string;
-  notes: string;
-  photoUrls: string[];
-  intent: string;
-  category: string;
-  propertyType: string;
-  city: string;
-  locality: string;
-  subLocality: string;
-  society: string;
-  houseNumber: string;
-  bedrooms: string;
-  bathrooms: string;
-  balconies: string;
-  additionalRooms: string[];
-  furnishing: string;
-  totalFloors: string;
-  propertyFloor: string;
-  possession: string;
-  propertyAge: string;
-  possessionBy: string;
-  areaType: string;
-  carpetArea: string;
-  plotArea: string;
-  builtUpArea: string;
-  facing: string;
-  powerBackup: string;
-  flooring: string;
-  coveredParking: string;
-  openParking: string;
-  waterSource: string;
-  ownership: string;
-  postedAs: string;
-  negotiable: boolean;
-  maintenance: string;
-  deposit: string;
-  preferredTenant: string;
-  preferredTenants: string[];
-  availableFrom: string;
-  brokerContact: string;
-  chargesExcluded: boolean;
-  plotLength: string;
-  plotBreadth: string;
-  boundaryWall: string;
-  openSides: string;
-  floorsAllowed: string;
-  constructionDone: string;
-  amenities: string[];
-};
 
 const emptyDraft = (): ListingDraft => ({
   title: "",
@@ -182,6 +121,36 @@ const emptyDraft = (): ListingDraft => ({
   intent: "",
   category: "",
   propertyType: "",
+  officeType: "",
+  retailType: "",
+  shopLocation: "",
+  shopWashroom: "",
+  parkingType: "",
+  entranceWidth: "",
+  ceilingHeight: "",
+  bookingAmount: "",
+  industryType: "",
+  hospitalityType: "",
+  plotType: "",
+  storageType: "",
+  minWorkstations: "",
+  maxWorkstations: "",
+  cabins: "",
+  meetingRooms: "",
+  washroomAvailability: "",
+  conferenceRoom: "",
+  receptionArea: "",
+  pantryType: "",
+  facilityParking: "",
+  centralAc: "",
+  lifts: "",
+  parkingAvailability: "",
+  preLeased: "",
+  currentRent: "",
+  leaseTenure: "",
+  annualRentIncrement: "",
+  leasedTo: "",
+  dgUpsIncluded: false,
   city: "",
   locality: "",
   subLocality: "",
@@ -201,6 +170,7 @@ const emptyDraft = (): ListingDraft => ({
   carpetArea: "",
   plotArea: "",
   builtUpArea: "",
+  superBuiltUpArea: "",
   facing: "",
   powerBackup: "",
   flooring: "",
@@ -210,6 +180,8 @@ const emptyDraft = (): ListingDraft => ({
   ownership: "",
   postedAs: "broker",
   negotiable: false,
+  allInclusive: false,
+  priceDetails: "",
   maintenance: "",
   deposit: "",
   preferredTenant: "",
@@ -223,6 +195,8 @@ const emptyDraft = (): ListingDraft => ({
   openSides: "",
   floorsAllowed: "",
   constructionDone: "",
+  constructionTypes: [],
+  approvedBy: "",
   amenities: [],
 });
 
@@ -239,17 +213,6 @@ function tenantList(initial?: Partial<PropertyFormData>) {
   return single.split(",").map((item) => item.trim()).filter(Boolean);
 }
 
-function rentDigits(value: string) {
-  if (/lakh|crore|thousand/i.test(value)) return "";
-  return value.replace(/[^\d]/g, "");
-}
-
-function formatRent(amount: string) {
-  const digits = amount.replace(/[^\d]/g, "");
-  if (!digits) return "";
-  return `₹${Number(digits).toLocaleString("en-IN")}`;
-}
-
 function capCount(value: string, plusAt: number) {
   if (!value) return "";
   const count = Number.parseInt(value, 10);
@@ -260,6 +223,115 @@ function capCount(value: string, plusAt: number) {
 
 function samePlace(a: string, b: string) {
   return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
+function isResidentialBuilderFloor(input: { category: string; propertyType: string }) {
+  return input.category === "residential" && input.propertyType === "builder-floor";
+}
+
+function isResidentialPlot(input: { category: string; propertyType: string }) {
+  return input.category === "residential" && input.propertyType === "plot";
+}
+
+function isRetailShopMall(input: {
+  intent: string;
+  category: string;
+  propertyType: string;
+  retailType: string;
+  shopLocation: string;
+}) {
+  if (
+    input.category !== "commercial" ||
+    input.propertyType !== "retail" ||
+    input.retailType !== "Commercial Shops"
+  ) {
+    return false;
+  }
+  if (input.shopLocation === "mall") return true;
+  return input.intent === "sell" && input.shopLocation === "commercial-project";
+}
+
+function clearRetailShop(next: ListingDraft) {
+  next.shopWashroom = "";
+  next.parkingType = "";
+  next.entranceWidth = "";
+  next.ceilingHeight = "";
+  next.bookingAmount = "";
+}
+
+function isOfficeListing(input: { category: string; propertyType: string }) {
+  return input.category === "commercial" && input.propertyType === "office";
+}
+
+function isCommercialLand(input: {
+  intent: string;
+  category: string;
+  propertyType: string;
+  plotType: string;
+}) {
+  return (
+    input.intent === "sell" &&
+    input.category === "commercial" &&
+    input.propertyType === "plot-land" &&
+    input.plotType === "commercial-land"
+  );
+}
+
+function isGenericCommercial(input: {
+  intent: string;
+  category: string;
+  propertyType: string;
+  retailType: string;
+  shopLocation: string;
+  plotType: string;
+}) {
+  return (
+    input.category === "commercial" &&
+    !isOfficeListing(input) &&
+    !isRetailShopMall(input) &&
+    !isCommercialLand(input)
+  );
+}
+
+function clearCommercialLandLease(next: ListingDraft) {
+  next.preLeased = "";
+  next.currentRent = "";
+  next.leaseTenure = "";
+  next.annualRentIncrement = "";
+  next.leasedTo = "";
+}
+
+function clearOfficeSpace(next: ListingDraft) {
+  next.minWorkstations = "";
+  next.maxWorkstations = "";
+  next.cabins = "";
+  next.meetingRooms = "";
+  next.washroomAvailability = "";
+  next.conferenceRoom = "";
+  next.receptionArea = "";
+  next.pantryType = "";
+  next.facilityParking = "";
+  next.centralAc = "";
+  next.lifts = "";
+  next.parkingAvailability = "";
+  next.preLeased = "";
+  next.currentRent = "";
+  next.leaseTenure = "";
+  next.annualRentIncrement = "";
+  next.leasedTo = "";
+}
+
+function isResidentialSaleProfile(input: {
+  category: string;
+  intent: string;
+  propertyType: string;
+}) {
+  return (
+    input.category === "residential" &&
+    input.intent !== "rent" &&
+    !isResidentialBuilderFloor(input) &&
+    !isResidentialPlot(input)
+  );
 }
 
 function locatedSummary(input: {
@@ -320,6 +392,36 @@ function fromInitial(initial?: Partial<PropertyFormData>): ListingDraft {
     intent: text(initial?.intent),
     category: text(initial?.category),
     propertyType: text(initial?.propertyType),
+    officeType: text(initial?.officeType),
+    retailType: text(initial?.retailType),
+    shopLocation: text(initial?.shopLocation),
+    shopWashroom: text(initial?.shopWashroom),
+    parkingType: text(initial?.parkingType),
+    entranceWidth: text(initial?.entranceWidth),
+    ceilingHeight: text(initial?.ceilingHeight),
+    bookingAmount: text(initial?.bookingAmount),
+    industryType: text(initial?.industryType),
+    hospitalityType: text(initial?.hospitalityType),
+    plotType: text(initial?.plotType),
+    storageType: text(initial?.storageType),
+    minWorkstations: text(initial?.minWorkstations),
+    maxWorkstations: text(initial?.maxWorkstations),
+    cabins: text(initial?.cabins),
+    meetingRooms: text(initial?.meetingRooms),
+    washroomAvailability: text(initial?.washroomAvailability),
+    conferenceRoom: text(initial?.conferenceRoom),
+    receptionArea: text(initial?.receptionArea),
+    pantryType: text(initial?.pantryType),
+    facilityParking: text(initial?.facilityParking),
+    centralAc: text(initial?.centralAc),
+    lifts: text(initial?.lifts),
+    parkingAvailability: text(initial?.parkingAvailability),
+    preLeased: text(initial?.preLeased),
+    currentRent: text(initial?.currentRent),
+    leaseTenure: text(initial?.leaseTenure),
+    annualRentIncrement: text(initial?.annualRentIncrement),
+    leasedTo: text(initial?.leasedTo),
+    dgUpsIncluded: Boolean(initial?.dgUpsIncluded),
     city: text(initial?.city),
     locality: text(initial?.locality),
     subLocality: text(initial?.subLocality),
@@ -337,6 +439,7 @@ function fromInitial(initial?: Partial<PropertyFormData>): ListingDraft {
     possessionBy: text(initial?.possessionBy),
     areaType: text(initial?.areaType),
     ...legacyAreas(initial),
+    superBuiltUpArea: text(initial?.superBuiltUpArea),
     facing: text(initial?.facing),
     powerBackup: text(initial?.powerBackup),
     flooring: text(initial?.flooring),
@@ -346,6 +449,8 @@ function fromInitial(initial?: Partial<PropertyFormData>): ListingDraft {
     ownership: text(initial?.ownership),
     postedAs: initial?.postedAs || "broker",
     negotiable: Boolean(initial?.negotiable),
+    allInclusive: Boolean(initial?.allInclusive),
+    priceDetails: text(initial?.priceDetails),
     maintenance: text(initial?.maintenance),
     deposit: text(initial?.deposit),
     preferredTenant: text(initial?.preferredTenant),
@@ -359,6 +464,8 @@ function fromInitial(initial?: Partial<PropertyFormData>): ListingDraft {
     openSides: text(initial?.openSides),
     floorsAllowed: text(initial?.floorsAllowed),
     constructionDone: text(initial?.constructionDone),
+    constructionTypes: initial?.constructionTypes ?? [],
+    approvedBy: text(initial?.approvedBy),
     amenities: initial?.amenities ?? [],
   };
 }
@@ -368,6 +475,7 @@ interface Props {
   onSubmit: (data: PropertyFormData) => Promise<void>;
   onCancel?: () => void;
   submitLabel?: string;
+  wizardBackRef?: { current: (() => boolean) | null };
 }
 
 export function PropertyForm({
@@ -375,6 +483,7 @@ export function PropertyForm({
   onSubmit,
   onCancel,
   submitLabel = "Save Property",
+  wizardBackRef,
 }: Props) {
   const keepDraft = !initial;
   const [step, setStep] = useState(1);
@@ -384,6 +493,7 @@ export function PropertyForm({
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<StepField, string>>>({});
   const fileRef = useRef<HTMLInputElement>(null);
   const skipScroll = useRef(true);
@@ -429,14 +539,25 @@ export function PropertyForm({
       field === "intent" ||
       field === "category" ||
       field === "propertyType" ||
+      field === "officeType" ||
+      field === "retailType" ||
+      field === "shopLocation" ||
+      field === "plotType" ||
+      field === "storageType" ||
       field === "city" ||
       field === "locality" ||
       field === "location" ||
       field === "title" ||
-      field === "price"
+      field === "price" ||
+      field === "currentRent"
     ) {
       clearError(field);
-    } else if (field === "carpetArea" || field === "plotArea" || field === "builtUpArea") {
+    } else if (
+      field === "carpetArea" ||
+      field === "plotArea" ||
+      field === "builtUpArea" ||
+      field === "superBuiltUpArea"
+    ) {
       clearError("area");
     } else if (error) {
       setError("");
@@ -455,6 +576,7 @@ export function PropertyForm({
             availableFrom: "",
             brokerContact: "",
             chargesExcluded: false,
+            ...(current.propertyType === "studio" ? {} : { furnishing: "" }),
           }
         : {}),
     }));
@@ -466,18 +588,78 @@ export function PropertyForm({
       ...current,
       category,
       propertyType: "",
+      officeType: "",
+      retailType: "",
+      shopLocation: "",
+      shopWashroom: "",
+      parkingType: "",
+      entranceWidth: "",
+      ceilingHeight: "",
+      bookingAmount: "",
+      industryType: "",
+      hospitalityType: "",
+      plotType: "",
+      storageType: "",
+      minWorkstations: "",
+      maxWorkstations: "",
+      cabins: "",
+      meetingRooms: "",
+      washroomAvailability: "",
+      conferenceRoom: "",
+      receptionArea: "",
+      pantryType: "",
+      facilityParking: "",
+      centralAc: "",
+      lifts: "",
+      parkingAvailability: "",
+      preLeased: "",
+      currentRent: "",
+      leaseTenure: "",
+      annualRentIncrement: "",
+      leasedTo: "",
+      dgUpsIncluded: false,
       amenities: current.amenities.filter((id) =>
         amenityOptions(category).some((option) => option.id === id),
       ),
     }));
     clearError("category");
     clearError("propertyType");
+    clearError("officeType");
+    clearError("retailType");
+    clearError("shopLocation");
+    clearError("plotType");
+    clearError("storageType");
   };
 
   const setPropertyType = (propertyType: string) => {
     setForm((current) => {
       const next = { ...current, propertyType };
-      if (current.category === "residential") return next;
+      if (propertyType !== "office") {
+        next.officeType = "";
+        clearOfficeSpace(next);
+      }
+      if (propertyType !== "retail") {
+        next.retailType = "";
+        next.shopLocation = "";
+        clearRetailShop(next);
+      }
+      if (propertyType !== "industry") next.industryType = "";
+      if (propertyType !== "hospitality") next.hospitalityType = "";
+      if (propertyType !== "plot-land") {
+        if (current.plotType === "commercial-land") clearCommercialLandLease(next);
+        next.plotType = "";
+      }
+      if (propertyType !== "storage") next.storageType = "";
+      const floorTypes = new Set<string>(BUILDER_FLOOR_TYPES.map((option) => option.id));
+      if (propertyType === "builder-floor") {
+        if (!floorTypes.has(next.configuration)) next.configuration = "";
+      } else if (floorTypes.has(next.configuration)) {
+        next.configuration = "";
+      }
+      if (current.category === "residential") {
+        if (current.intent !== "rent" && propertyType !== "studio") next.furnishing = "";
+        return next;
+      }
       if (isLandType(propertyType)) {
         const config = next.configuration.trim();
         if (!config || config.endsWith("BHK")) next.configuration = "Vacant Plot";
@@ -504,14 +686,35 @@ export function PropertyForm({
       return next;
     });
     clearError("propertyType");
+    clearError("officeType");
+    clearError("retailType");
+    clearError("shopLocation");
+    clearError("plotType");
+    clearError("storageType");
   };
 
-  const setPossession = (possession: string) => {
+  const setBuilderPossession = (possession: string) => {
     setForm((current) => ({
       ...current,
       possession,
-      propertyAge: possession === "ready" ? current.propertyAge : "",
+      propertyAge: possession === "under-construction" ? "" : current.propertyAge,
       possessionBy: possession === "under-construction" ? current.possessionBy : "",
+      allInclusive: possession === "under-construction" ? false : current.allInclusive,
+      negotiable: possession === "under-construction" ? false : current.negotiable,
+      priceDetails: possession === "under-construction" ? "" : current.priceDetails,
+      chargesExcluded: possession === current.possession ? current.chargesExcluded : false,
+    }));
+  };
+
+  const setConstructionDone = (constructionDone: string) => {
+    setForm((current) => ({
+      ...current,
+      constructionDone,
+      constructionTypes: constructionDone === "yes" ? current.constructionTypes : [],
+      allInclusive: constructionDone === "no" ? false : current.allInclusive,
+      negotiable: constructionDone === "no" ? false : current.negotiable,
+      priceDetails: constructionDone === "no" ? "" : current.priceDetails,
+      chargesExcluded: constructionDone === "no" ? false : current.chargesExcluded,
     }));
   };
 
@@ -531,6 +734,26 @@ export function PropertyForm({
       if (!current.intent) errors.intent = "Choose sell or rent";
       if (!current.category) errors.category = "Choose residential or commercial";
       if (!current.propertyType) errors.propertyType = "Property type is required";
+      if (current.category === "commercial" && current.propertyType === "office" && !current.officeType) {
+        errors.officeType = "Choose the kind of office";
+      }
+      if (current.category === "commercial" && current.propertyType === "retail" && !current.retailType) {
+        errors.retailType = "Choose the type of retail space";
+      }
+      if (
+        current.category === "commercial" &&
+        current.propertyType === "retail" &&
+        current.retailType &&
+        !current.shopLocation
+      ) {
+        errors.shopLocation = "Choose where the shop is located";
+      }
+      if (current.category === "commercial" && current.propertyType === "plot-land" && !current.plotType) {
+        errors.plotType = "Choose the type of plot / land";
+      }
+      if (current.category === "commercial" && current.propertyType === "storage" && !current.storageType) {
+        errors.storageType = "Choose the kind of storage";
+      }
     }
     if (target === 2) {
       if (!current.city.trim()) errors.city = "City is required";
@@ -539,17 +762,73 @@ export function PropertyForm({
     if (
       target === 3 &&
       current.category === "residential" &&
-      current.intent === "rent"
+      current.intent === "rent" &&
+      current.propertyType !== "builder-floor" &&
+      current.propertyType !== "plot"
     ) {
       if (!current.carpetArea.trim() && !current.plotArea.trim() && !current.builtUpArea.trim()) {
         errors.area = "At least one area type is mandatory.";
       }
-      if (!rentDigits(current.price)) errors.price = "Expected rent is required";
+      const rentError = rentAmountError(current.price, "Expected rent is required");
+      if (rentError) errors.price = rentError;
+    }
+    if (target === 3 && (isResidentialBuilderFloor(current) || isResidentialPlot(current))) {
+      const priceError = salePriceError(current.price, "Expected price is required");
+      if (priceError) errors.price = priceError;
+    }
+    if (target === 3 && isResidentialSaleProfile(current)) {
+      const priceError = salePriceError(current.price, "Please specify the price");
+      if (priceError) errors.price = priceError;
+    }
+    if (target === 3 && isRetailShopMall(current)) {
+      if (!current.carpetArea.trim()) errors.area = "Carpet area is mandatory.";
+      const priceError = salePriceError(current.price, "Expected price is required");
+      if (priceError) errors.price = priceError;
+      if (current.preLeased === "yes") {
+        const rentError = rentAmountError(current.currentRent, "Current rent per month is required");
+        if (rentError) errors.currentRent = rentError;
+      }
+    }
+    if (target === 3 && isCommercialLand(current)) {
+      const priceError = salePriceError(current.price, "Expected price is required");
+      if (priceError) errors.price = priceError;
+      if (current.preLeased === "yes") {
+        const rentError = rentAmountError(current.currentRent, "Current rent per month is required");
+        if (rentError) errors.currentRent = rentError;
+      }
+    }
+    if (target === 3 && isGenericCommercial(current)) {
+      if (!current.carpetArea.trim() && !current.plotArea.trim() && !current.builtUpArea.trim()) {
+        errors.area = "At least one area type is mandatory.";
+      }
+      const priceError = salePriceError(current.price, "Expected price is required");
+      if (priceError) errors.price = priceError;
+      if (current.preLeased === "yes") {
+        const rentError = rentAmountError(current.currentRent, "Current rent per month is required");
+        if (rentError) errors.currentRent = rentError;
+      }
+    }
+    if (target === 3 && isOfficeListing(current)) {
+      if (current.officeType === "co-working") {
+        if (!current.carpetArea.trim() && !current.plotArea.trim() && !current.builtUpArea.trim()) {
+          errors.area = "At least one area type is mandatory.";
+        }
+      }
+      const priceError = salePriceError(current.price, "Expected price is required");
+      if (priceError) errors.price = priceError;
+      if (current.preLeased === "yes") {
+        const rentError = rentAmountError(current.currentRent, "Current rent per month is required");
+        if (rentError) errors.currentRent = rentError;
+      }
     }
     if (target === 5) {
       const title = current.title.trim() || suggestTitle(current);
       if (!title) errors.title = "Property name is required";
-      if (!current.price.trim()) errors.price = "Price is required";
+      const priceError =
+        current.intent === "rent" && current.category === "residential"
+          ? rentAmountError(current.price, "Price is required")
+          : salePriceError(current.price, "Price is required");
+      if (priceError) errors.price = priceError;
     }
     return errors;
   };
@@ -559,11 +838,23 @@ export function PropertyForm({
       intent: "Sell or rent",
       category: "Residential or commercial",
       propertyType: "Property type",
+      officeType: "Office type",
+      retailType: "Retail type",
+      shopLocation: "Shop location",
+      plotType: "Plot / land type",
+      storageType: "Storage type",
       city: "City",
       locality: "Locality",
       location: "Location",
       title: "Property Name",
-      price: "Expected rent",
+      currentRent: "Current rent per month",
+      price:
+        form.category === "residential" &&
+        form.intent === "rent" &&
+        form.propertyType !== "builder-floor" &&
+        form.propertyType !== "plot"
+          ? "Expected rent"
+          : "Expected price",
       area: "Area",
     };
     setFieldErrors(errors);
@@ -598,18 +889,11 @@ export function PropertyForm({
         }));
       }
     }
-    setStep((current) => {
-      let next = Math.min(current + 1, 5);
-      if (form.category === "commercial" && next === 3) next = 4;
-      return next;
-    });
+    setStep((current) => Math.min(current + 1, 5));
   };
 
   const goTo = (target: number) => {
-    let nextTarget = target;
-    if (form.category === "commercial" && nextTarget === 3) {
-      nextTarget = target > step ? 4 : 2;
-    }
+    const nextTarget = target;
     if (nextTarget === step) return;
     if (nextTarget < step) {
       setFieldErrors({});
@@ -636,6 +920,21 @@ export function PropertyForm({
     setError("");
     setStep(nextTarget);
   };
+
+  const goToRef = useRef(goTo);
+  goToRef.current = goTo;
+
+  useEffect(() => {
+    if (!wizardBackRef) return;
+    wizardBackRef.current = () => {
+      if (step <= 1) return false;
+      goToRef.current(step - 1);
+      return true;
+    };
+    return () => {
+      wizardBackRef.current = null;
+    };
+  }, [step, wizardBackRef]);
 
   const handlePhotos = async (files: FileList | null) => {
     if (!files?.length) return;
@@ -672,13 +971,13 @@ export function PropertyForm({
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (step < 5) {
-      continueStep();
-      return;
-    }
+  const cancelForm = () => {
+    savedRef.current = true;
+    sessionStorage.removeItem(NEW_PROPERTY_DRAFT);
+    onCancel?.();
+  };
 
+  const saveProperty = async () => {
     for (let index = 1; index <= 5; index += 1) {
       const errors = validateStep(form, index);
       if (Object.keys(errors).length > 0) {
@@ -759,13 +1058,35 @@ export function PropertyForm({
     }
   };
 
-  const roomDetails = showsRoomDetails(form.propertyType);
-  const land = isLandType(form.propertyType);
   const residential = form.category === "residential";
   const rentListing = residential && form.intent === "rent";
+  const residentialBuilderFloor = isResidentialBuilderFloor(form);
+  const residentialPlot = isResidentialPlot(form);
+  const residentialSaleProfile = isResidentialSaleProfile(form);
+  const officeListing = isOfficeListing(form);
+  const retailShopMall = isRetailShopMall(form);
+  const commercialLand = isCommercialLand(form);
+  const genericCommercial = isGenericCommercial(form);
+  const guidedDetails =
+    rentListing ||
+    residentialBuilderFloor ||
+    residentialPlot ||
+    officeListing ||
+    retailShopMall ||
+    commercialLand ||
+    genericCommercial;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form
+      onSubmit={(event) => event.preventDefault()}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter") return;
+        const target = event.target;
+        if (target instanceof HTMLTextAreaElement || target instanceof HTMLButtonElement) return;
+        event.preventDefault();
+      }}
+      className="space-y-4"
+    >
       <div>
         <div className="flex gap-1.5" aria-hidden>
           {STEPS.map((item) => (
@@ -783,23 +1104,45 @@ export function PropertyForm({
         </div>
         <div className="mt-4 flex items-end justify-between gap-3">
           <h2 className="font-serif text-[22px] font-medium leading-tight text-primary">
-            {step === 3 && rentListing ? "Tell us about your property" : STEP_TITLES[step - 1]}
+            {step === 3 && guidedDetails
+              ? "Tell us about your property"
+              : STEP_TITLES[step - 1]}
           </h2>
           <p className="shrink-0 text-[12px] font-medium text-muted">
             {step} / {STEPS.length}
           </p>
         </div>
         <p className="mt-1 text-[13px] leading-relaxed text-muted">
-          {step === 3 && rentListing
+          {step === 3 && rentListing && !residentialBuilderFloor && !residentialPlot
             ? "Add area, rooms, and the rent tenants will pay."
-            : STEP_HINTS[step - 1]}
+            : step === 3 && residentialBuilderFloor
+              ? "Add the floor, area, rooms, and price."
+              : step === 3 && residentialPlot
+                ? "Add the plot area, dimensions, and price."
+                : step === 3 && residentialSaleProfile
+                  ? "Add rooms, area, furnishing, and price."
+                  : step === 3 && officeListing && form.officeType === "bare-shell"
+                    ? "Add area, availability, and the expected price."
+                    : step === 3 && officeListing && form.officeType === "co-working"
+                      ? "Add area, washrooms, and the expected price."
+                      : step === 3 && officeListing
+                        ? "Add area, office details, and the expected price."
+                        : step === 3 && retailShopMall
+                          ? "Add carpet area, shop details, and the expected price."
+                          : step === 3 && commercialLand
+                            ? "Add plot area, dimensions, and the expected price."
+                            : step === 3 && genericCommercial
+                              ? "Add area, washrooms, and the expected price."
+                              : step === 3 && form.category === "commercial"
+                    ? "Add area, possession, and other property details."
+                    : STEP_HINTS[step - 1]}
         </p>
       </div>
 
-      {error && <p className={formErrorBanner}>{error}</p>}
+      {error && <FormMessage>{error}</FormMessage>}
 
       <div className="space-y-5 rounded-[14px] border border-border/70 bg-surface p-4 shadow-sm">
-      {step === 1 && (
+      {step === 1 && form.category !== "commercial" && (
         <>
           <Choices
             label="And it's a *"
@@ -818,213 +1161,57 @@ export function PropertyForm({
               onType={setPropertyType}
             />
           )}
-          {form.category === "commercial" && (
-            <>
-          <Choices
-            label="You're looking to *"
-            value={form.intent}
-            options={LISTING_INTENTS}
-            onChange={setIntent}
-            error={fieldErrors.intent}
-          />
-          <SelectField
-            label="Property type *"
-            value={form.propertyType}
-            onChange={setPropertyType}
-            options={getPropertyTypeOptions(form.category, form.propertyType)}
-            placeholder={
-              form.category
-                ? "Select property type"
-                : "Choose residential or commercial first"
-            }
-            disabled={!form.category}
-            error={fieldErrors.propertyType}
-          />
-          <SelectField
-            label="Configuration"
-            value={form.configuration}
-            onChange={(value) => update("configuration", value)}
-            options={getConfigurationOptions(form.configuration).map((option) => ({
-              id: option,
-              label: option,
-            }))}
-            placeholder="Select configuration"
-          />
-
-          {showsBedrooms(form.propertyType) && (
-            <Choices
-              label="Bedrooms"
-              value={form.bedrooms}
-              options={BEDROOM_OPTIONS}
-              onChange={(value) => {
-                setForm((current) => {
-                  const next = { ...current, bedrooms: value };
-                  const config = current.configuration.trim();
-                  const bhkConfigs = new Set(["", "1 BHK", "2 BHK", "3 BHK", "4 BHK", "5 BHK"]);
-                  if (bhkConfigs.has(config)) {
-                    next.configuration = value === "5+" ? "5 BHK" : `${value} BHK`;
-                  }
-                  return next;
-                });
-              }}
-            />
-          )}
-
-          {roomDetails && (
-            <>
-              <Choices
-                label={residential ? "Bathrooms" : "Washrooms"}
-                value={form.bathrooms}
-                options={BATHROOM_OPTIONS}
-                onChange={(value) => update("bathrooms", value)}
-              />
-              {residential && (
-                <Choices
-                  label="Balconies"
-                  value={form.balconies}
-                  options={BALCONY_OPTIONS}
-                  onChange={(value) => update("balconies", value)}
-                />
-              )}
-              {residential && (
-                <MultiChoices
-                  label="Other rooms"
-                  values={form.additionalRooms}
-                  options={ADDITIONAL_ROOM_OPTIONS}
-                  onToggle={(id) => toggleList("additionalRooms", id)}
-                />
-              )}
-              <SelectField
-                label="Furnishing"
-                value={form.furnishing}
-                onChange={(value) => update("furnishing", value)}
-                options={FURNISHING_OPTIONS}
-                placeholder="Select furnishing"
-              />
-              <Field
-                label="Total floors"
-                value={form.totalFloors}
-                onChange={(value) => update("totalFloors", value)}
-                inputMode="numeric"
-              />
-              {showsPropertyFloor(form.propertyType) && (
-                <Field
-                  label="Property on floor"
-                  value={form.propertyFloor}
-                  onChange={(value) => update("propertyFloor", value)}
-                  inputMode="numeric"
-                />
-              )}
-              <div className="grid grid-cols-2 gap-2">
-                <Field
-                  label="Covered parking"
-                  value={form.coveredParking}
-                  onChange={(value) => update("coveredParking", value)}
-                  inputMode="numeric"
-                />
-                <Field
-                  label="Open parking"
-                  value={form.openParking}
-                  onChange={(value) => update("openParking", value)}
-                  inputMode="numeric"
-                />
-              </div>
-              {residential && (
-                <SelectField
-                  label="Water source"
-                  value={form.waterSource}
-                  onChange={(value) => update("waterSource", value)}
-                  options={WATER_SOURCE_OPTIONS}
-                  placeholder="Select water source"
-                />
-              )}
-            </>
-          )}
-
-          {land && (
-            <>
-              <div className="grid grid-cols-2 gap-2">
-                <Field
-                  label="Length"
-                  value={form.plotLength}
-                  onChange={(value) => update("plotLength", value)}
-                  inputMode="decimal"
-                />
-                <Field
-                  label="Breadth"
-                  value={form.plotBreadth}
-                  onChange={(value) => update("plotBreadth", value)}
-                  inputMode="decimal"
-                />
-              </div>
-              <Field
-                label="Floors allowed"
-                value={form.floorsAllowed}
-                onChange={(value) => update("floorsAllowed", value)}
-                inputMode="numeric"
-              />
-              <Choices
-                label="Boundary wall"
-                value={form.boundaryWall}
-                options={YES_NO_OPTIONS}
-                onChange={(value) => update("boundaryWall", value)}
-              />
-              <Choices
-                label="Open sides"
-                value={form.openSides}
-                options={OPEN_SIDE_OPTIONS}
-                onChange={(value) => update("openSides", value)}
-              />
-              <Choices
-                label="Any construction done"
-                value={form.constructionDone}
-                options={YES_NO_OPTIONS}
-                onChange={(value) => update("constructionDone", value)}
-              />
-            </>
-          )}
-
-          <AreaFields
-            carpetArea={form.carpetArea}
-            plotArea={form.plotArea}
-            builtUpArea={form.builtUpArea}
-            onChange={update}
-          />
-          <Choices
-            label="Possession"
-            value={form.possession}
-            options={POSSESSION_OPTIONS}
-            onChange={setPossession}
-          />
-          {form.possession === "ready" && (
-            <SelectField
-              label="Age of property"
-              value={form.propertyAge}
-              onChange={(value) => update("propertyAge", value)}
-              options={PROPERTY_AGE_OPTIONS}
-              placeholder="Select age"
-            />
-          )}
-          {form.possession === "under-construction" && (
-            <Field
-              label="Possession by"
-              value={form.possessionBy}
-              onChange={(value) => update("possessionBy", value)}
-              type="month"
-            />
-          )}
-          {roomDetails && (
-            <SelectField
-              label="Facing"
-              value={form.facing}
-              onChange={(value) => update("facing", value)}
-              options={FACING_OPTIONS}
-              placeholder="Select facing"
-            />
-          )}
-            </>
-          )}
         </>
+      )}
+
+      {step === 1 && form.category === "commercial" && (
+        <CommercialDetails
+          form={form}
+          intentError={fieldErrors.intent}
+          categoryError={fieldErrors.category}
+          typeError={fieldErrors.propertyType}
+          officeTypeError={fieldErrors.officeType}
+          retailTypeError={fieldErrors.retailType}
+          shopLocationError={fieldErrors.shopLocation}
+          plotTypeError={fieldErrors.plotType}
+          storageTypeError={fieldErrors.storageType}
+          onIntent={setIntent}
+          onCategory={setCategory}
+          onType={setPropertyType}
+          onOfficeType={(value) => update("officeType", value)}
+          onRetailType={(value) => {
+            update("retailType", value);
+            if (value !== "Commercial Shops") {
+              setForm((current) => {
+                const next = { ...current, retailType: value };
+                clearRetailShop(next);
+                return next;
+              });
+            }
+          }}
+          onShopLocation={(value) => {
+            setForm((current) => {
+              const next = { ...current, shopLocation: value };
+              const keepsShopForm =
+                value === "mall" || (current.intent === "sell" && value === "commercial-project");
+              if (!keepsShopForm) clearRetailShop(next);
+              if (value !== "commercial-project") next.plotArea = "";
+              return next;
+            });
+            clearError("shopLocation");
+          }}
+          onIndustryType={(value) => update("industryType", value)}
+          onHospitalityType={(value) => update("hospitalityType", value)}
+          onPlotType={(value) => {
+            setForm((current) => {
+              const next = { ...current, plotType: value };
+              if (value !== "commercial-land") clearCommercialLandLease(next);
+              return next;
+            });
+            clearError("plotType");
+          }}
+          onStorageType={(value) => update("storageType", value)}
+        />
       )}
 
       {step === 2 && (
@@ -1080,7 +1267,7 @@ export function PropertyForm({
         </>
       )}
 
-      {step === 3 && rentListing && (
+      {step === 3 && rentListing && !residentialBuilderFloor && !residentialPlot && (
         <RentProfile
           form={form}
           areaError={fieldErrors.area}
@@ -1100,15 +1287,16 @@ export function PropertyForm({
         />
       )}
 
-      {step === 3 && residential && !rentListing && (
+      {step === 3 && residentialSaleProfile && (
         <ResidentialProfile
           form={form}
+          priceError={fieldErrors.price}
           onBedrooms={(value) => {
             setForm((current) => {
               const next = { ...current, bedrooms: value };
               const config = current.configuration.trim();
-              const bhkConfigs = new Set(["", "1 BHK", "2 BHK", "3 BHK", "4 BHK", "5 BHK"]);
-              if (bhkConfigs.has(config)) {
+              const bhkConfigs = new Set(["", "1 BHK", "2 BHK", "3 BHK", "4 BHK", "5 BHK", "6 BHK"]);
+              if (bhkConfigs.has(config) || /^\d+ BHK$/.test(config)) {
                 next.configuration = value === "5+" ? "5 BHK" : `${value} BHK`;
               }
               return next;
@@ -1116,6 +1304,81 @@ export function PropertyForm({
           }}
           onChange={update}
           onToggleAmenity={(id) => toggleList("amenities", id)}
+        />
+      )}
+
+      {step === 3 && residentialPlot && (
+        <ResidentialPlotProfile
+          form={form}
+          priceError={fieldErrors.price}
+          onChange={update}
+          onConstruction={setConstructionDone}
+        />
+      )}
+
+      {step === 3 && residentialBuilderFloor && (
+        <ResidentialBuilderFloorProfile
+          form={form}
+          priceError={fieldErrors.price}
+          onChange={update}
+          onPossession={setBuilderPossession}
+        />
+      )}
+
+      {step === 3 && officeListing && form.officeType === "bare-shell" && (
+        <BareShellOfficeProfile
+          form={form}
+          priceError={fieldErrors.price}
+          rentError={fieldErrors.currentRent}
+          onChange={update}
+        />
+      )}
+
+      {step === 3 && officeListing && form.officeType === "co-working" && (
+        <CoWorkingOfficeProfile
+          form={form}
+          areaError={fieldErrors.area}
+          priceError={fieldErrors.price}
+          rentError={fieldErrors.currentRent}
+          onChange={update}
+        />
+      )}
+
+      {step === 3 && officeListing && form.officeType !== "bare-shell" && form.officeType !== "co-working" && (
+        <OfficeProfile
+          form={form}
+          priceError={fieldErrors.price}
+          rentError={fieldErrors.currentRent}
+          onChange={update}
+        />
+      )}
+
+      {step === 3 && retailShopMall && (
+        <RetailShopMallProfile
+          form={form}
+          areaError={fieldErrors.area}
+          priceError={fieldErrors.price}
+          rentError={fieldErrors.currentRent}
+          onChange={update}
+        />
+      )}
+
+      {step === 3 && commercialLand && (
+        <CommercialLandProfile
+          form={form}
+          priceError={fieldErrors.price}
+          rentError={fieldErrors.currentRent}
+          onChange={update}
+        />
+      )}
+
+      {step === 3 && genericCommercial && (
+        <CommercialProfile
+          form={form}
+          areaError={fieldErrors.area}
+          priceError={fieldErrors.price}
+          rentError={fieldErrors.currentRent}
+          onChange={update}
         />
       )}
 
@@ -1166,23 +1429,21 @@ export function PropertyForm({
             onChange={(value) => update("title", value)}
             error={fieldErrors.title}
           />
-          {!rentListing && (
+          {!rentListing && !residentialBuilderFloor && !residentialPlot && !officeListing && !retailShopMall && !commercialLand && !genericCommercial && (
             <>
-              <PriceField
-                value={form.price}
-                onChange={(value) => update("price", value)}
-                label={form.intent === "rent" ? "Monthly rent *" : "Price *"}
-                error={fieldErrors.price}
-              />
-              <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <input
-                  type="checkbox"
-                  checked={form.negotiable}
-                  onChange={(e) => update("negotiable", e.target.checked)}
-                  className="h-4 w-4 accent-[#D4AF37]"
+              {!residentialSaleProfile && (
+                <PriceField
+                  value={form.price}
+                  onChange={(value) => update("price", value)}
+                  label={form.intent === "rent" ? "Monthly rent *" : "Price *"}
+                  error={fieldErrors.price}
                 />
-                Price is negotiable
-              </label>
+              )}
+              <CheckField
+                label="Price is negotiable"
+                checked={form.negotiable}
+                onChange={(checked) => update("negotiable", checked)}
+              />
               {form.intent === "rent" && (
                 <>
                   <Field
@@ -1252,10 +1513,10 @@ export function PropertyForm({
       )}
 
       <div className="flex gap-3 pt-2">
-        {step === 1 && onCancel && (
+        {onCancel && (
           <button
             type="button"
-            onClick={onCancel}
+            onClick={() => setCancelConfirmOpen(true)}
             className="flex-1 rounded-xl border border-border bg-background py-3 text-sm font-medium text-foreground"
           >
             Cancel
@@ -1276,12 +1537,13 @@ export function PropertyForm({
             onClick={continueStep}
             className="flex-1 rounded-xl bg-primary py-3 text-sm font-semibold text-foreground"
           >
-            {step === 3 && rentListing ? "Post & continue" : "Continue"}
+            {step === 3 && guidedDetails ? "Post & continue" : "Continue"}
           </button>
         ) : (
           <button
-            type="submit"
+            type="button"
             disabled={loading || uploading}
+            onClick={() => void saveProperty()}
             className="flex-1 rounded-xl bg-primary py-3 text-sm font-semibold text-foreground disabled:opacity-50"
           >
             {loading ? <ButtonLoader label="Saving…" /> : submitLabel}
@@ -1289,785 +1551,18 @@ export function PropertyForm({
         )}
       </div>
       </div>
-    </form>
-  );
-}
-
-function ResidentialDetails({
-  form,
-  intentError,
-  typeError,
-  onIntent,
-  onType,
-}: {
-  form: ListingDraft;
-  intentError?: string;
-  typeError?: string;
-  onIntent: (value: string) => void;
-  onType: (value: string) => void;
-}) {
-  const typeOptions =
-    !form.propertyType ||
-    RESIDENTIAL_PROPERTY_TYPES.some((option) => option.id === form.propertyType)
-      ? RESIDENTIAL_PROPERTY_TYPES
-      : [
-          {
-            id: form.propertyType,
-            label: propertyTypeLabel("residential", form.propertyType),
-          },
-          ...RESIDENTIAL_PROPERTY_TYPES,
-        ];
-
-  return (
-    <>
-      <Choices
-        label="Listing type *"
-        value={form.intent}
-        options={RESIDENTIAL_LISTING_TYPES}
-        onChange={onIntent}
-        error={intentError}
-        columns={2}
-      />
-      <Choices
-        label="Property type *"
-        value={form.propertyType}
-        options={typeOptions}
-        onChange={onType}
-        error={typeError}
-      />
-    </>
-  );
-}
-
-function RentProfile({
-  form,
-  onBedrooms,
-  onChange,
-  areaError,
-  priceError,
-}: {
-  form: ListingDraft;
-  onBedrooms: (value: string) => void;
-  onChange: <K extends keyof ListingDraft>(field: K, value: ListingDraft[K]) => void;
-  areaError?: string;
-  priceError?: string;
-}) {
-  const [moreRent, setMoreRent] = useState(
-    Boolean(form.deposit.trim() || form.maintenance.trim()),
-  );
-  const words = amountInWords(form.price);
-
-  const toggleTenant = (id: string) => {
-    const selected = form.preferredTenants.includes(id);
-    if (id === "anyone") {
-      onChange("preferredTenants", selected ? [] : ["anyone"]);
-      return;
-    }
-    const next = selected
-      ? form.preferredTenants.filter((item) => item !== id)
-      : [...form.preferredTenants.filter((item) => item !== "anyone"), id];
-    onChange("preferredTenants", next);
-  };
-
-  return (
-    <>
-      <div data-field-error={areaError ? "true" : undefined}>
-        <p className="text-sm font-semibold text-foreground">Add Area Details</p>
-        <p className="mt-0.5 text-[12px] text-muted">At least one area type is mandatory.</p>
-        <div className="mt-3 space-y-4">
-          <AreaMeasureField
-            label="Plot Area"
-            value={form.plotArea}
-            onChange={(value) => onChange("plotArea", value)}
-          />
-          <AreaMeasureField
-            label="Carpet Area"
-            value={form.carpetArea}
-            onChange={(value) => onChange("carpetArea", value)}
-          />
-          <AreaMeasureField
-            label="Built-up Area"
-            value={form.builtUpArea}
-            onChange={(value) => onChange("builtUpArea", value)}
-          />
-        </div>
-        {areaError && <p className={fieldErrorText}>{areaError}</p>}
-      </div>
-
-      <div>
-        <p className="text-sm font-semibold text-foreground">Add Room Details</p>
-        <div className="mt-3 space-y-4">
-          <RoomCount
-            label="No. of Bedrooms"
-            value={form.bedrooms}
-            maxChip={4}
-            onChange={onBedrooms}
-          />
-          <RoomCount
-            label="No. of Bathrooms"
-            value={form.bathrooms}
-            maxChip={4}
-            onChange={(value) => onChange("bathrooms", value)}
-          />
-          <Choices
-            label="Balconies"
-            value={form.balconies}
-            options={RENT_BALCONY_OPTIONS}
-            onChange={(value) => onChange("balconies", value)}
-          />
-        </div>
-      </div>
-
-      <Choices
-        label="Furnishing"
-        value={form.furnishing}
-        options={RENT_FURNISHING_OPTIONS}
-        onChange={(value) => onChange("furnishing", value)}
-      />
-
-      <div>
-        <p className="text-sm font-semibold text-foreground">Floor Details</p>
-        <p className="mt-0.5 text-[12px] text-muted">
-          Total no of floors and your floor details.
-        </p>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <Field
-            label="Total floors"
-            value={form.totalFloors}
-            onChange={(value) => onChange("totalFloors", value)}
-            type="number"
-            inputMode="numeric"
-          />
-          <Field
-            label="Your floor"
-            value={form.propertyFloor}
-            onChange={(value) => onChange("propertyFloor", value)}
-            type="number"
-            inputMode="numeric"
-          />
-        </div>
-      </div>
-
-      <Choices
-        label="Age of property"
-        value={form.propertyAge}
-        options={RENT_AGE_OPTIONS}
-        onChange={(value) => onChange("propertyAge", value)}
-      />
-
-      <Field
-        label="Available from"
-        value={form.availableFrom}
-        onChange={(value) => onChange("availableFrom", value)}
-        type="date"
-      />
-
-      <MultiChoices
-        label="Willing to rent out to"
-        values={form.preferredTenants}
-        options={RENT_TENANT_OPTIONS}
-        onToggle={toggleTenant}
-      />
-
-      <div data-field-error={priceError ? "true" : undefined}>
-        <p className="text-sm font-semibold text-foreground">Rent Details</p>
-        <div className="mt-3">
-          <Field
-            label="Price (Monthly per flat) *"
-            value={rentDigits(form.price)}
-            onChange={(value) => onChange("price", formatRent(value))}
-            placeholder="Expected Rent"
-            type="number"
-            inputMode="numeric"
-            error={priceError}
-          />
-          {words && <p className="mt-1.5 text-[12px] text-muted">{words}</p>}
-        </div>
-        <label className="mt-3 flex items-center gap-2 text-sm font-medium text-foreground">
-          <input
-            type="checkbox"
-            checked={form.chargesExcluded}
-            onChange={(e) => onChange("chargesExcluded", e.target.checked)}
-            className="h-4 w-4 accent-[#D4AF37]"
-          />
-          Electricity & Water charges excluded
-        </label>
-        <label className="mt-2 flex items-center gap-2 text-sm font-medium text-foreground">
-          <input
-            type="checkbox"
-            checked={form.negotiable}
-            onChange={(e) => onChange("negotiable", e.target.checked)}
-            className="h-4 w-4 accent-[#D4AF37]"
-          />
-          Price Negotiable
-        </label>
-        <button
-          type="button"
-          onClick={() => setMoreRent((open) => !open)}
-          className="mt-3 text-sm font-medium text-primary"
-        >
-          {moreRent ? "Hide rent details" : "+ Add more Rent details"}
-        </button>
-        {moreRent && (
-          <div className="mt-3 space-y-4">
-            <Field
-              label="Security deposit"
-              value={form.deposit}
-              onChange={(value) => onChange("deposit", value)}
-              placeholder="e.g. 2 months"
-            />
-            <Field
-              label="Maintenance"
-              value={form.maintenance}
-              onChange={(value) => onChange("maintenance", value)}
-              placeholder="Monthly charges"
-            />
-          </div>
-        )}
-      </div>
-
-      <Choices
-        label="Are you ok with brokers contacting you?"
-        value={form.brokerContact}
-        options={YES_NO_OPTIONS}
-        onChange={(value) => onChange("brokerContact", value)}
-        columns={2}
-      />
-    </>
-  );
-}
-
-function RoomCount({
-  label,
-  value,
-  maxChip,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  maxChip: number;
-  onChange: (value: string) => void;
-}) {
-  const options = Array.from({ length: maxChip }, (_, index) => {
-    const id = String(index + 1);
-    return { id, label: id };
-  });
-  const custom = value !== "" && !options.some((option) => option.id === value);
-  const [open, setOpen] = useState(custom);
-
-  return (
-    <div>
-      <Choices
-        label={label}
-        value={custom ? "" : value}
-        options={options}
-        onChange={(next) => {
-          setOpen(false);
-          onChange(next);
+      <ConfirmDialog
+        open={cancelConfirmOpen}
+        title="Cancel this property?"
+        description="The details you entered will be discarded."
+        confirmLabel="Discard"
+        cancelLabel="Keep editing"
+        onConfirm={() => {
+          setCancelConfirmOpen(false);
+          cancelForm();
         }}
-        columns={4}
+        onCancel={() => setCancelConfirmOpen(false)}
       />
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="mt-2 text-sm font-medium text-primary"
-      >
-        + Add other
-      </button>
-      {open && (
-        <input
-          type="number"
-          inputMode="numeric"
-          min={maxChip + 1}
-          value={custom ? value : ""}
-          placeholder="Enter number"
-          onChange={(e) => onChange(e.target.value)}
-          className={cn(fieldClass, "mt-2")}
-        />
-      )}
-    </div>
-  );
-}
-
-function ResidentialProfile({
-  form,
-  onBedrooms,
-  onChange,
-  onToggleAmenity,
-}: {
-  form: ListingDraft;
-  onBedrooms: (value: string) => void;
-  onChange: <K extends keyof ListingDraft>(field: K, value: ListingDraft[K]) => void;
-  onToggleAmenity: (id: string) => void;
-}) {
-  return (
-    <>
-      <AreaFields
-        carpetArea={form.carpetArea}
-        plotArea={form.plotArea}
-        builtUpArea={form.builtUpArea}
-        onChange={onChange}
-      />
-      <Choices
-        label="Bedrooms"
-        value={form.bedrooms}
-        options={BEDROOM_OPTIONS}
-        onChange={onBedrooms}
-        columns={5}
-      />
-      <Choices
-        label="Bathrooms"
-        value={form.bathrooms}
-        options={BATHROOM_OPTIONS}
-        onChange={(value) => onChange("bathrooms", value)}
-        columns={4}
-      />
-      <Choices
-        label="Balconies"
-        value={form.balconies}
-        options={BALCONY_OPTIONS}
-        onChange={(value) => onChange("balconies", value)}
-        columns={4}
-      />
-      <div>
-        <p className="mb-2 text-[13px] font-medium text-foreground">Floor / Total floors</p>
-        <div className="grid grid-cols-2 gap-2">
-          <input
-            type="number"
-            inputMode="numeric"
-            min="0"
-            value={form.propertyFloor}
-            placeholder="Floor"
-            onChange={(e) => onChange("propertyFloor", e.target.value)}
-            className={fieldClass}
-          />
-          <input
-            type="number"
-            inputMode="numeric"
-            min="0"
-            value={form.totalFloors}
-            placeholder="Total floors"
-            onChange={(e) => onChange("totalFloors", e.target.value)}
-            className={fieldClass}
-          />
-        </div>
-      </div>
-      <Choices
-        label="Furnishing"
-        value={form.furnishing}
-        options={FURNISHING_OPTIONS}
-        onChange={(value) => onChange("furnishing", value)}
-      />
-      <Choices
-        label="Facing"
-        value={form.facing}
-        options={FACING_OPTIONS}
-        onChange={(value) => onChange("facing", value)}
-        columns={4}
-      />
-      <Choices
-        label="Power backup"
-        value={form.powerBackup}
-        options={POWER_BACKUP_OPTIONS}
-        onChange={(value) => onChange("powerBackup", value)}
-      />
-      <div>
-        <p className="mb-2 text-[13px] font-medium text-foreground">Reserved parking</p>
-        <div className="overflow-hidden rounded-xl border border-border bg-background">
-          <CountStepper
-            label="Covered"
-            value={form.coveredParking}
-            onChange={(value) => onChange("coveredParking", value)}
-          />
-          <CountStepper
-            label="Open"
-            value={form.openParking}
-            onChange={(value) => onChange("openParking", value)}
-            divided
-          />
-        </div>
-      </div>
-      <Choices
-        label="Ownership"
-        value={form.ownership}
-        options={OWNERSHIP_OPTIONS}
-        onChange={(value) => onChange("ownership", value)}
-      />
-      <SelectField
-        label="Flooring"
-        value={form.flooring}
-        onChange={(value) => onChange("flooring", value)}
-        options={FLOORING_OPTIONS}
-        placeholder="Select flooring"
-      />
-      <MultiChoices
-        label="Amenities"
-        values={form.amenities}
-        options={amenityOptions("residential")}
-        onToggle={onToggleAmenity}
-      />
-    </>
-  );
-}
-
-function legacyAreas(initial?: Partial<PropertyFormData>) {
-  const carpetArea = text(initial?.carpetArea);
-  const plotArea = text(initial?.plotArea);
-  const builtUpArea = text(initial?.builtUpArea);
-  if (carpetArea || plotArea || builtUpArea) {
-    return { carpetArea, plotArea, builtUpArea };
-  }
-  const area = text(initial?.area);
-  const areaType = text(initial?.areaType);
-  if (areaType === "plot") return { carpetArea: "", plotArea: area, builtUpArea: "" };
-  if (areaType === "built-up" || areaType === "super-built-up") {
-    return { carpetArea: "", plotArea: "", builtUpArea: area };
-  }
-  return { carpetArea: area, plotArea: "", builtUpArea: "" };
-}
-
-function areaSummary(input: Pick<ListingDraft, "carpetArea" | "plotArea" | "builtUpArea">) {
-  return [
-    input.carpetArea.trim() && `Carpet ${input.carpetArea.trim()}`,
-    input.plotArea.trim() && `Plot ${input.plotArea.trim()}`,
-    input.builtUpArea.trim() && `Built-up ${input.builtUpArea.trim()}`,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-}
-
-function formAreaUnit(unit: AreaUnit): FormAreaUnit {
-  if (unit === "gaj" || unit === "sq-yd") return "gaj";
-  if (unit === "marla" || unit === "kanal") return unit;
-  return "sq-ft";
-}
-
-function AreaFields({
-  carpetArea,
-  plotArea,
-  builtUpArea,
-  onChange,
-}: {
-  carpetArea: string;
-  plotArea: string;
-  builtUpArea: string;
-  onChange: <K extends "carpetArea" | "plotArea" | "builtUpArea">(
-    field: K,
-    value: string,
-  ) => void;
-}) {
-  return (
-    <>
-      <AreaMeasureField
-        label="Carpet Area"
-        value={carpetArea}
-        onChange={(value) => onChange("carpetArea", value)}
-      />
-      <AreaMeasureField
-        label="Plot Area"
-        value={plotArea}
-        onChange={(value) => onChange("plotArea", value)}
-      />
-      <AreaMeasureField
-        label="Built-up Area"
-        value={builtUpArea}
-        onChange={(value) => onChange("builtUpArea", value)}
-      />
-    </>
-  );
-}
-
-function AreaMeasureField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  const parsed = parseArea(value);
-  const [unit, setUnit] = useState<FormAreaUnit>(formAreaUnit(parsed.unit));
-  const sqftRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    const next = parseArea(value);
-    if (!next.amount) return;
-    const nextUnit = formAreaUnit(next.unit);
-    const amount = next.unit === "sq-yd" || nextUnit === next.unit
-      ? next.amount
-      : fromSqft(toSqft(next.amount, next.unit) ?? 0, nextUnit);
-    setUnit(nextUnit);
-    const sqft = toSqft(amount, nextUnit);
-    if (sqft != null && (sqftRef.current == null || Math.abs(sqftRef.current - sqft) > 0.5)) {
-      sqftRef.current = sqft;
-    }
-  }, [value]);
-
-  const displayAmount = (() => {
-    if (!parsed.amount) return "";
-    if (formAreaUnit(parsed.unit) === unit && (parsed.unit === unit || parsed.unit === "sq-yd")) {
-      return parsed.amount;
-    }
-    const sqft = sqftRef.current ?? toSqft(parsed.amount, parsed.unit);
-    return sqft == null ? parsed.amount : fromSqft(sqft, unit);
-  })();
-
-  const writeAmount = (amount: string) => {
-    sqftRef.current = toSqft(amount, unit);
-    onChange(formatArea(amount, unit));
-  };
-
-  const writeUnit = (nextUnit: FormAreaUnit) => {
-    if (nextUnit === unit) return;
-    const sqft = sqftRef.current ?? (parsed.amount ? toSqft(parsed.amount, parsed.unit) : null);
-    setUnit(nextUnit);
-    if (sqft == null || !parsed.amount) return;
-    sqftRef.current = sqft;
-    onChange(formatArea(fromSqft(sqft, nextUnit), nextUnit));
-  };
-
-  return (
-    <div className="flex items-stretch overflow-hidden rounded-xl border border-border bg-background focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/25">
-      <input
-        type="text"
-        inputMode="decimal"
-        value={displayAmount}
-        placeholder={label}
-        aria-label={label}
-        onChange={(e) => writeAmount(e.target.value.replace(/[^\d.]/g, ""))}
-        className="min-w-0 flex-1 bg-transparent px-3 py-3 text-base text-foreground outline-none placeholder:text-muted"
-      />
-      <div className="w-px shrink-0 bg-border" />
-      <div className="relative shrink-0">
-        <select
-          value={unit}
-          aria-label={`${label} unit`}
-          onChange={(e) => writeUnit(e.target.value as FormAreaUnit)}
-          className="h-full appearance-none bg-transparent py-3 pl-3 pr-8 text-base text-foreground outline-none"
-        >
-          {FORM_AREA_UNITS.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.id === "sq-ft" ? "sq.ft." : option.label}
-            </option>
-          ))}
-        </select>
-        <ChevronDown
-          size={16}
-          className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-muted"
-        />
-      </div>
-    </div>
-  );
-}
-
-function CountStepper({
-  label,
-  value,
-  onChange,
-  divided,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  divided?: boolean;
-}) {
-  const count = Number.parseInt(value, 10);
-  const current = Number.isFinite(count) && count > 0 ? count : 0;
-
-  return (
-    <div
-      className={cn(
-        "flex items-center justify-between gap-3 px-3 py-2.5",
-        divided && "border-t border-border",
-      )}
-    >
-      <span className="text-sm font-medium text-foreground">{label}</span>
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          aria-label={`Decrease ${label}`}
-          onClick={() => onChange(current <= 1 ? "" : String(current - 1))}
-          className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-surface text-foreground"
-        >
-          <Minus size={14} />
-        </button>
-        <span className="w-5 text-center text-sm font-semibold tabular-nums text-foreground">
-          {current}
-        </span>
-        <button
-          type="button"
-          aria-label={`Increase ${label}`}
-          onClick={() => onChange(String(current + 1))}
-          className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-surface text-foreground"
-        >
-          <Plus size={14} />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function Choices({
-  label,
-  value,
-  options,
-  onChange,
-  error,
-  columns,
-}: {
-  label: string;
-  value: string;
-  options: readonly { id: string; label: string }[];
-  onChange: (value: string) => void;
-  error?: string;
-  columns?: 2 | 4 | 5;
-}) {
-  return (
-    <div data-field-error={error ? "true" : undefined}>
-      <p className="mb-2 text-[13px] font-medium text-foreground">{label}</p>
-      <div
-        className={cn(
-          columns ? "grid gap-1.5" : "flex flex-wrap gap-2",
-          columns === 2 && "grid-cols-2",
-          columns === 4 && "grid-cols-4",
-          columns === 5 && "grid-cols-5",
-        )}
-      >
-        {options.map((option) => {
-          const selected = value === option.id;
-          return (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => onChange(option.id)}
-              className={cn(
-                "border text-sm font-medium transition-colors",
-                columns
-                  ? "rounded-xl px-1 py-2.5 text-center"
-                  : "rounded-full px-3.5 py-2",
-                selected
-                  ? "border-primary bg-primary text-foreground"
-                  : "border-border bg-background text-muted",
-              )}
-            >
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
-      {error && <p className={fieldErrorText}>{error}</p>}
-    </div>
-  );
-}
-
-function MultiChoices({
-  label,
-  values,
-  options,
-  onToggle,
-}: {
-  label: string;
-  values: string[];
-  options: readonly { id: string; label: string }[];
-  onToggle: (id: string) => void;
-}) {
-  return (
-    <div>
-      <p className="mb-2 text-[13px] font-medium text-foreground">{label}</p>
-      <div className="flex flex-wrap gap-2">
-        {options.map((option) => {
-          const selected = values.includes(option.id);
-          return (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => onToggle(option.id)}
-              className={cn(
-                "rounded-full border px-3.5 py-2 text-sm font-medium transition-colors",
-                selected
-                  ? "border-primary bg-secondary-tint text-secondary-dark"
-                  : "border-border bg-background text-muted",
-              )}
-            >
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function SelectField({
-  label,
-  value,
-  onChange,
-  options,
-  placeholder,
-  error,
-  disabled,
-  allowEmpty = true,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: readonly { id: string; label: string }[];
-  placeholder?: string;
-  error?: string;
-  disabled?: boolean;
-  allowEmpty?: boolean;
-}) {
-  return (
-    <div data-field-error={error ? "true" : undefined}>
-      <p className="mb-2 text-[13px] font-medium text-foreground">{label}</p>
-      <select
-        disabled={disabled}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={cn(fieldClass, error && fieldErrorBorder, disabled && "opacity-60")}
-      >
-        {allowEmpty && <option value="">{placeholder ?? "Select"}</option>}
-        {options.map((option) => (
-          <option key={option.id} value={option.id}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      {error && <p className={fieldErrorText}>{error}</p>}
-    </div>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  placeholder,
-  error,
-  type = "text",
-  inputMode,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  error?: string;
-  type?: string;
-  inputMode?: "numeric" | "decimal" | "text";
-}) {
-  return (
-    <div data-field-error={error ? "true" : undefined}>
-      <p className="mb-2 text-[13px] font-medium text-foreground">{label}</p>
-      <input
-        type={type}
-        inputMode={inputMode}
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        className={cn(fieldClass, error && fieldErrorBorder)}
-      />
-      {error && <p className={fieldErrorText}>{error}</p>}
-    </div>
+    </form>
   );
 }

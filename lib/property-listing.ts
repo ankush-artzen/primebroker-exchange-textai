@@ -8,13 +8,29 @@ import {
   POWER_BACKUP_OPTIONS,
   POSSESSION_OPTIONS,
   POSTED_AS_OPTIONS,
+  BUILDER_FLOOR_AGE_OPTIONS,
+  POSSESSION_BY_OPTIONS,
+  PLOT_CONSTRUCTION_OPTIONS,
+  PLOT_POSSESSION_OPTIONS,
   PROPERTY_AGE_OPTIONS,
   RENT_TENANT_OPTIONS,
   TENANT_OPTIONS,
   WATER_SOURCE_OPTIONS,
   YES_NO_OPTIONS,
+  OFFICE_TYPES,
+  PLOT_TYPES,
+  RETAIL_TYPES,
+  SHOP_LOCATIONS,
+  SHOP_WASHROOM_OPTIONS,
+  PARKING_TYPE_OPTIONS,
+  STORAGE_TYPES,
+  PANTRY_TYPES,
+  PRESENCE_OPTIONS,
   amenityLabel,
+  isLandType,
+  isNamedPropertyFloor,
   optionLabel,
+  propertyFloorLabel,
   propertyTypeLabel,
 } from "@/lib/constants/property";
 import type { Property } from "@/lib/types";
@@ -23,6 +39,33 @@ const LISTING_STRING_KEYS = [
   "intent",
   "category",
   "propertyType",
+  "officeType",
+  "retailType",
+  "shopLocation",
+  "shopWashroom",
+  "parkingType",
+  "entranceWidth",
+  "ceilingHeight",
+  "bookingAmount",
+  "plotType",
+  "storageType",
+  "minWorkstations",
+  "maxWorkstations",
+  "cabins",
+  "meetingRooms",
+  "washroomAvailability",
+  "conferenceRoom",
+  "receptionArea",
+  "pantryType",
+  "facilityParking",
+  "centralAc",
+  "lifts",
+  "parkingAvailability",
+  "preLeased",
+  "currentRent",
+  "leaseTenure",
+  "annualRentIncrement",
+  "leasedTo",
   "city",
   "locality",
   "subLocality",
@@ -41,6 +84,7 @@ const LISTING_STRING_KEYS = [
   "carpetArea",
   "plotArea",
   "builtUpArea",
+  "superBuiltUpArea",
   "facing",
   "powerBackup",
   "flooring",
@@ -51,6 +95,7 @@ const LISTING_STRING_KEYS = [
   "postedAs",
   "maintenance",
   "deposit",
+  "priceDetails",
   "preferredTenant",
   "availableFrom",
   "brokerContact",
@@ -60,9 +105,10 @@ const LISTING_STRING_KEYS = [
   "openSides",
   "floorsAllowed",
   "constructionDone",
+  "approvedBy",
 ] as const;
 
-const LISTING_ARRAY_KEYS = ["amenities", "additionalRooms", "preferredTenants"] as const;
+const LISTING_ARRAY_KEYS = ["amenities", "additionalRooms", "preferredTenants", "constructionTypes"] as const;
 
 export function optionalText(value: unknown) {
   if (typeof value !== "string") return null;
@@ -93,8 +139,14 @@ export function listingFromBody(body: Record<string, unknown>) {
   if ("negotiable" in body) {
     listing.negotiable = Boolean(body.negotiable);
   }
+  if ("allInclusive" in body) {
+    listing.allInclusive = Boolean(body.allInclusive);
+  }
   if ("chargesExcluded" in body) {
     listing.chargesExcluded = Boolean(body.chargesExcluded);
+  }
+  if ("dgUpsIncluded" in body) {
+    listing.dgUpsIncluded = Boolean(body.dgUpsIncluded);
   }
 
   for (const key of LISTING_ARRAY_KEYS) {
@@ -117,11 +169,7 @@ export function configurationFromListing(input: {
   if (current) return current;
   const bedrooms = input.bedrooms?.trim();
   if (bedrooms) return bedrooms === "5+" ? "5 BHK" : `${bedrooms} BHK`;
-  if (
-    input.propertyType === "plot" ||
-    input.propertyType === "commercial-land" ||
-    input.propertyType === "agricultural"
-  ) {
+  if (isLandType(input.propertyType)) {
     return "Vacant Plot";
   }
   return "";
@@ -166,11 +214,13 @@ function formatMonth(value?: string | null) {
 }
 
 function formatFloor(property: Pick<Property, "propertyFloor" | "totalFloors">) {
-  if (property.propertyFloor && property.totalFloors) {
-    return `Floor ${property.propertyFloor} of ${property.totalFloors}`;
+  const floor = propertyFloorLabel(property.propertyFloor);
+  const named = isNamedPropertyFloor(property.propertyFloor);
+  if (floor && property.totalFloors) {
+    return named ? `${floor} of ${property.totalFloors}` : `Floor ${floor} of ${property.totalFloors}`;
   }
   if (property.totalFloors) return `${property.totalFloors} floors`;
-  if (property.propertyFloor) return `Floor ${property.propertyFloor}`;
+  if (floor) return named ? floor : `Floor ${floor}`;
   return "";
 }
 
@@ -202,6 +252,69 @@ export function listingDetailRows(property: Property) {
     ),
   );
   push("Property type", propertyTypeLabel(property.category, property.propertyType));
+  if (property.propertyType === "retail") {
+    push("Retail type", optionLabel(RETAIL_TYPES, property.retailType));
+    push("Shop located inside", optionLabel(SHOP_LOCATIONS, property.shopLocation));
+    if (
+      property.retailType === "Commercial Shops" &&
+      (property.shopLocation === "mall" || property.shopLocation === "commercial-project")
+    ) {
+      push("Washrooms", optionLabel(SHOP_WASHROOM_OPTIONS, property.shopWashroom));
+      push("Parking type", optionLabel(PARKING_TYPE_OPTIONS, property.parkingType));
+      push("Entrance width", property.entranceWidth ? `${property.entranceWidth} ft.` : "");
+      push("Ceiling height", property.ceilingHeight ? `${property.ceilingHeight} ft.` : "");
+      push("Booking amount", property.bookingAmount);
+    }
+  }
+  if (property.propertyType === "plot-land") {
+    push("Plot / land type", optionLabel(PLOT_TYPES, property.plotType));
+    if (property.intent === "sell" && property.plotType === "commercial-land") {
+      push("Pre-leased / pre-rented", optionLabel(YES_NO_OPTIONS, property.preLeased));
+      if (property.preLeased === "yes") {
+        push("Current rent per month", property.currentRent);
+        push("Lease tenure", property.leaseTenure ? `${property.leaseTenure} years` : "");
+        push("Annual rent increment", property.annualRentIncrement);
+        push("Leased to", property.leasedTo);
+      }
+    }
+  }
+  if (property.propertyType === "storage") {
+    push("Storage type", optionLabel(STORAGE_TYPES, property.storageType));
+  }
+  if (property.propertyType === "office") {
+    push("Office type", optionLabel(OFFICE_TYPES, property.officeType));
+    push("Min. workstations", property.minWorkstations);
+    push("Max. workstations", property.maxWorkstations);
+    push("Cabins", property.cabins);
+    push("Meeting rooms", property.meetingRooms);
+    push("Washrooms", optionLabel(PRESENCE_OPTIONS, property.washroomAvailability));
+    if (property.officeType === "co-working" && property.bathrooms) {
+      const washrooms =
+        property.bathrooms === "none"
+          ? "None"
+          : property.bathrooms === "shared"
+            ? "Shared"
+            : property.bathrooms;
+      push("No. of washrooms", washrooms);
+    }
+    push("Conference room", optionLabel(PRESENCE_OPTIONS, property.conferenceRoom));
+    push("Reception area", optionLabel(PRESENCE_OPTIONS, property.receptionArea));
+    push("Pantry", optionLabel(PANTRY_TYPES, property.pantryType));
+    push("Facility parking", optionLabel(PRESENCE_OPTIONS, property.facilityParking));
+    push("Central air conditioning", optionLabel(PRESENCE_OPTIONS, property.centralAc));
+    push("Lifts", optionLabel(PRESENCE_OPTIONS, property.lifts));
+    push("Parking", optionLabel(PRESENCE_OPTIONS, property.parkingAvailability));
+    push("Pre-leased / pre-rented", optionLabel(YES_NO_OPTIONS, property.preLeased));
+    if (property.preLeased === "yes") {
+      push("Current rent per month", property.currentRent);
+      push("Lease tenure", property.leaseTenure ? `${property.leaseTenure} years` : "");
+      push(
+        property.officeType === "bare-shell" ? "Increase in rent in years" : "Annual rent increment",
+        property.annualRentIncrement,
+      );
+      push("Leased to", property.leasedTo);
+    }
+  }
   push("City", property.city);
   push("Locality", property.locality);
   push("Sub locality", property.subLocality);
@@ -210,11 +323,32 @@ export function listingDetailRows(property: Property) {
   push("Carpet area", property.carpetArea);
   push("Plot area", property.plotArea);
   push("Built-up area", property.builtUpArea);
+  push("Super built-up area", property.superBuiltUpArea);
   push("Bedrooms", property.bedrooms);
-  push(
-    property.category === "commercial" ? "Washrooms" : "Bathrooms",
-    property.bathrooms,
-  );
+  const washroomCount =
+    property.bathrooms === "none"
+      ? "None"
+      : property.bathrooms === "shared"
+        ? "Shared"
+        : property.bathrooms;
+  push(property.category === "commercial" ? "Washrooms" : "Bathrooms", washroomCount);
+  if (
+    property.category === "commercial" &&
+    property.propertyType !== "office" &&
+    !(
+      property.intent === "sell" &&
+      property.propertyType === "plot-land" &&
+      property.plotType === "commercial-land"
+    )
+  ) {
+    push("Pre-leased / pre-rented", optionLabel(YES_NO_OPTIONS, property.preLeased));
+    if (property.preLeased === "yes") {
+      push("Current rent per month", property.currentRent);
+      push("Lease tenure", property.leaseTenure ? `${property.leaseTenure} years` : "");
+      push("Annual rent increment", property.annualRentIncrement);
+      push("Leased to", property.leasedTo);
+    }
+  }
   push("Balconies", property.balconies);
   if (property.additionalRooms?.length) {
     push(
@@ -227,8 +361,19 @@ export function listingDetailRows(property: Property) {
   push("Furnishing", optionLabel(FURNISHING_OPTIONS, property.furnishing));
   push("Floor", formatFloor(property));
   push("Possession", optionLabel(POSSESSION_OPTIONS, property.possession));
-  push("Age of property", optionLabel(PROPERTY_AGE_OPTIONS, property.propertyAge));
-  push("Possession by", formatMonth(property.possessionBy));
+  push(
+    "Age of property",
+    optionLabel(
+      [...PROPERTY_AGE_OPTIONS, ...BUILDER_FLOOR_AGE_OPTIONS],
+      property.propertyAge,
+    ),
+  );
+  push(
+    "Possession by",
+    [...POSSESSION_BY_OPTIONS, ...PLOT_POSSESSION_OPTIONS].find(
+      (option) => option.id === property.possessionBy,
+    )?.label || formatMonth(property.possessionBy),
+  );
   push("Facing", optionLabel(FACING_OPTIONS, property.facing));
   push("Power backup", optionLabel(POWER_BACKUP_OPTIONS, property.powerBackup));
   push("Flooring", optionLabel(FLOORING_OPTIONS, property.flooring));
@@ -250,6 +395,15 @@ export function listingDetailRows(property: Property) {
   push("Boundary wall", optionLabel(YES_NO_OPTIONS, property.boundaryWall));
   push("Open sides", property.openSides);
   push("Construction done", optionLabel(YES_NO_OPTIONS, property.constructionDone));
+  if (property.constructionTypes?.length) {
+    push(
+      "Construction type",
+      property.constructionTypes
+        .map((id) => optionLabel(PLOT_CONSTRUCTION_OPTIONS, id))
+        .join(", "),
+    );
+  }
+  push("Approved by", property.approvedBy);
   push("Ownership", optionLabel(OWNERSHIP_OPTIONS, property.ownership));
   push("Posted as", optionLabel(POSTED_AS_OPTIONS, property.postedAs));
   push("Maintenance", property.maintenance);
@@ -265,7 +419,27 @@ export function listingDetailRows(property: Property) {
   } else {
     push("Preferred tenant", optionLabel(TENANT_OPTIONS, property.preferredTenant));
   }
-  if (property.chargesExcluded) push("Electricity & water", "Excluded");
+  if (property.allInclusive) push("All inclusive price", true);
+  if (property.dgUpsIncluded) push("DG & UPS power backup", "Included");
+  push("Additional price details", property.priceDetails);
+  if (property.chargesExcluded) {
+    const residentialFloor =
+      property.category === "residential" && property.propertyType === "builder-floor";
+    const commercialLand =
+      property.category === "commercial" &&
+      property.propertyType === "plot-land" &&
+      property.plotType === "commercial-land";
+    push(
+      residentialFloor
+        ? property.possession === "under-construction"
+          ? "Govt. charges"
+          : "Tax and other charges"
+        : commercialLand
+          ? "Tax and Govt. charges"
+          : "Electricity & water",
+      "Excluded",
+    );
+  }
   push("Brokers can contact", optionLabel(YES_NO_OPTIONS, property.brokerContact));
   if (property.negotiable) push("Negotiable", true);
   if (property.amenities?.length) {

@@ -14,7 +14,9 @@ export function BottomNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { canManageUsers, role } = useAccess();
-  const canCreate = !isStaffRole(role);
+  const addingRecord =
+    pathname.startsWith("/leads/create") || pathname.startsWith("/properties/new");
+  const canCreate = !isStaffRole(role) && !addingRecord;
   const navTabs = getNavTabs(canManageUsers);
   const compact = navTabs.length > 4;
   const [quickAddOpen, setQuickAddOpen] = useState(false);
