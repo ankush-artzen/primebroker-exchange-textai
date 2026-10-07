@@ -65,6 +65,11 @@ export async function sendVerificationSms(phone: string) {
 }
 
 export async function checkVerificationSms(phone: string, code: string) {
+  // Local testing only. Real SMS codes are still checked with Twilio.
+  if (code === "000000" && process.env.NODE_ENV !== "production") {
+    return true;
+  }
+
   const { client, serviceSid } = getVerifyClient();
   const result = await client.verify.v2
     .services(serviceSid)
