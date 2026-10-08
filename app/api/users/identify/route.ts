@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
         role: "USER",
       },
     });
-
+    
     return Response.json(serializeUser(user, createSessionToken(user.id)));
   } catch (error) {
     console.error("identify error:", error);

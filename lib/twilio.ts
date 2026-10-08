@@ -56,12 +56,31 @@ export function twilioUserMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+function isTrialUnverified(error: unknown) {
+  const err = error as { code?: number; message?: string } | null;
+  const message = err?.message ?? "";
+  return (
+    err?.code === 21608 ||
+    /unverified/i.test(message) ||
+    /trial/i.test(message)
+  );
+}
+
 export async function sendVerificationSms(phone: string) {
   const { client, serviceSid } = getVerifyClient();
-  return client.verify.v2.services(serviceSid).verifications.create({
-    to: toE164India(phone),
-    channel: "sms",
-  });
+
+  try {
+    return await client.verify.v2.services(serviceSid).verifications.create({
+      to: toE164India(phone),
+      channel: "sms",
+    });
+  } catch (error) {
+    // Trial accounts cannot SMS unverified numbers. Locally, continue so 000000 can be used.
+    if (process.env.NODE_ENV !== "production" && isTrialUnverified(error)) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 export async function checkVerificationSms(phone: string, code: string) {

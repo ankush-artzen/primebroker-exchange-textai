@@ -20,6 +20,7 @@ export function actorMayAddUsers(user: Actor): boolean {
   return mayAddUsers(user.role, user.userLimit);
 }
 
+
 export function leadScope(
   user: Actor,
   extra: Prisma.LeadWhereInput = {},
