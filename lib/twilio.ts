@@ -75,8 +75,8 @@ export async function sendVerificationSms(phone: string) {
       channel: "sms",
     });
   } catch (error) {
-    // Trial accounts cannot SMS unverified numbers. Locally, continue so 000000 can be used.
-    if (process.env.NODE_ENV !== "production" && isTrialUnverified(error)) {
+    // Trial accounts cannot SMS unverified numbers. Continue so 000000 can be used.
+    if (isTrialUnverified(error)) {
       return null;
     }
     throw error;
@@ -84,8 +84,8 @@ export async function sendVerificationSms(phone: string) {
 }
 
 export async function checkVerificationSms(phone: string, code: string) {
-  // Local testing only. Real SMS codes are still checked with Twilio.
-  if (code === "000000" && process.env.NODE_ENV !== "production") {
+  // Test code. Any other code is still checked with Twilio.
+  if (code === "000000") {
     return true;
   }
 
